@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Panel xmlns:fx="http://ns.adobe.com/mxml/2009"
+		 xmlns:s ="library://ns.adobe.com/flex/spark"
+		 xmlns:mx="library://ns.adobe.com/flex/mx"
+		 xmlns:cp="com.winonetech.components.*"
+		 width="300" height="200"
+		 title="剩余： {data.length} 个相关文件。">
+	<s:List width="100%" height="100%" enabled="false"
+			dataProvider="{list}"
+			skinClass="com.winonetech.skins.DisabledListSkin">
+		<s:itemRenderer>
+			<fx:Component>
+				<cp:ProgressItem/>
+			</fx:Component>
+		</s:itemRenderer>
+	</s:List>
+	
+	<fx:Script>
+		<![CDATA[
+			
+			import cn.vision.collections.Map;
+			import cn.vision.events.pattern.CommandEvent;
+			import cn.vision.utils.LogUtil;
+			
+			import com.winonetech.core.wt;
+			import com.winonetech.tools.Cache;
+			
+			import mx.collections.ArrayCollection;
+			
+			
+			/**
+			 * 
+			 * 开始进度演示。
+			 * 
+			 */
+			
+			public function play():void
+			{
+				if(!playing)
+				{
+					playing = true;
+					processPlay();
+				}
+			}
+			
+			
+			/**
+			 * 
+			 * 停止进度演示。
+			 * 
+			 */
+			
+			public function stop():void
+			{
+				if (playing)
+				{
+					playing = false;
+					processStop();
+				}
+			}
+			
+			
+			/**
+			 * @private
+			 */
+			protected function processPlay():void
+			{
+				list.removeAll();
+				pushCaches();
+			}
+			
+			/**
+			 * @private
+			 */
+			protected function processStop():void
+			{
+				
+			}
+			
+			
+			/**
+			 * @private
+			 */
+			private function pushCaches():void
+			{
+				if (data)
+				{
+					for (var key:String in data)
+					{
+						if (list.length < 3)
+						{
+							var cache:Cache = data[key];
+							if (playing)
+							{
+								LogUtil.log(data.className + "<" + data.id + ">"+" 优先缓存：" + cache.saveURL + " 剩余：" + data.length);
+								Cache.shift(cache);
+							}
+							cache.addEventListener(CommandEvent.COMMAND_END, handlerCacheEnd);
+							if (list.getItemIndex(cache) == -1) list.addItem(cache);
+						}
+						else break;
+					}
+				}
+			}
+			
+			
+			/**
+			 * @private
+			 */
+			private function handlerCacheEnd($e:CommandEvent):void
+			{
+				var cache:Cache = $e.command as Cache;
+				if (cache)
+				{
+					cache.removeEventListener(CommandEvent.COMMAND_END, handlerCacheEnd);
+					var index:uint = list.getItemIndex(cache);
+					if (index>= 0)   list.removeItemAt(index);
+				}
+				
+				data.length && pushCaches();
+			}
+			
+			
+			/**
+			 * 
+			 * 需要演示的进度下载的Cache集合。
+			 * 
+			 */
+			[Bindable]
+			public function get data():Map
+			{
+				return wt::data;
+			}
+			
+			/**
+			 * @private
+			 */
+			public function set data($value:Map):void
+			{
+				wt::data = $value;
+				
+				playing && processPlay();
+			}
+			
+			
+			/**
+			 * @private
+			 */
+			private var playing:Boolean;
+			
+			
+			/**
+			 * @private
+			 */
+			[Bindable]
+			private var list:ArrayCollection = new ArrayCollection;
+			
+			
+			/**
+			 * @private
+			 */
+			wt var data:Map;
+			
+		]]>
+	</fx:Script>
+</s:Panel>

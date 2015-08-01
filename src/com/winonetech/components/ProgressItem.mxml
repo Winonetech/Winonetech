@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:ItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009"
+				xmlns:s ="library://ns.adobe.com/flex/spark"
+				xmlns:mx="library://ns.adobe.com/flex/mx"
+				height="55" width="100%">
+	<s:Group width="100%" height="100%">
+		<s:layout>
+			<s:VerticalLayout paddingTop="10" paddingBottom="10"
+							  paddingLeft="10" paddingRight="10"/>
+		</s:layout>
+		<s:Label text="{fileName}"/>
+		<mx:ProgressBar id="bar" width="100%" minimum="0" maximum="100"
+						labelPlacement="right" labelWidth="0"
+						indeterminate="false" mode="manual"/>
+	</s:Group>
+	
+	<fx:Script>
+		<![CDATA[
+			
+			import cn.vision.events.pattern.CommandEvent;
+			
+			import com.winonetech.core.wt;
+			import com.winonetech.tools.Cache;
+			
+			
+			/**
+			 * @private
+			 */
+			private function resolveData():void
+			{
+				cache = data as Cache;
+				if (cache)
+				{
+					fileName = cache.saveURL;
+					cache.addEventListener(CommandEvent.COMMAND_END, handlerCacheEnd);
+					cache.addEventListener(ProgressEvent.PROGRESS, handlerProgress);
+				}
+			}
+			
+			
+			/**
+			 * @private
+			 */
+			private function handlerProgress($e:ProgressEvent):void
+			{
+				bar && bar.setProgress($e.bytesLoaded, $e.bytesTotal);
+			}
+			
+			/**
+			 * @private
+			 */
+			private function handlerCacheEnd($e:CommandEvent):void
+			{
+				$e.command.removeEventListener(CommandEvent.COMMAND_END, handlerCacheEnd);
+				$e.command.removeEventListener(ProgressEvent.PROGRESS, handlerProgress);
+			}
+			
+			
+			/**
+			 * 
+			 * itemRender接口。
+			 * 
+			 */
+			
+			override public function get data():Object
+			{
+				return wt::data;
+			}
+			
+			/**
+			 * @private
+			 */
+			override public function set data($value:Object):void
+			{
+				wt::data = $value;
+				resolveData();
+			}
+			
+			
+			/**
+			 * @private
+			 */
+			private var cache:Cache;
+			
+			/**
+			 * @private
+			 */
+			[Bindable]
+			private var fileName:String;
+			
+			/**
+			 * @private
+			 */
+			[Bindable]
+			private var fileSize:String;
+			
+			
+			/**
+			 * @private
+			 */
+			wt var data:Object;
+			
+		]]>
+	</fx:Script>
+</s:ItemRenderer>
