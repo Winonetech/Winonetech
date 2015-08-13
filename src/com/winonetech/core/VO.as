@@ -255,6 +255,14 @@ package com.winonetech.core
 			return getProperty("id");
 		}
 		
+		/**
+		 * @private
+		 */
+		public function set id($id:String):void
+		{
+			setProperty("id", $id);
+		}
+		
 		
 		/**
 		 * 
