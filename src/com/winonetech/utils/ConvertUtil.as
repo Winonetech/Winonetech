@@ -117,7 +117,7 @@ package com.winonetech.utils
 		
 		public static function touint($value:String):uint
 		{
-			if ($value.charAt(0) == "#") $value = "0x" + $value.substr(1);
+			if ($value && $value.charAt(0) == "#") $value = "0x" + $value.substr(1);
 			return uint($value);
 		}
 		

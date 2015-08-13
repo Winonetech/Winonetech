@@ -8,8 +8,10 @@ package com.winonetech.core
 	 */
 	
 	
-	import cn.vision.core.VSEventDispatcher;
+	import adobe.utils.XMLUI;
+	
 	import cn.vision.collections.Map;
+	import cn.vision.core.VSEventDispatcher;
 	import cn.vision.events.pattern.CommandEvent;
 	import cn.vision.utils.ClassUtil;
 	import cn.vision.utils.ObjectUtil;
@@ -41,11 +43,11 @@ package com.winonetech.core
 		 * 
 		 */
 		
-		public function VO($data:Object = null)
+		public function VO($data:Object = null, $name:String = "vo")
 		{
 			super();
 			
-			initialize($data);
+			initialize($data, $name);
 		}
 		
 		
@@ -67,6 +69,10 @@ package com.winonetech.core
 						?  XMLUtil.convert(XML(src), Object)
 						:  JSON.parse(src);
 				}
+				else if ($data is XML)
+				{
+					data = XMLUtil.convert($data, Object);
+				}
 				else
 				{
 					data = ObjectUtil.clone($data);
@@ -75,13 +81,31 @@ package com.winonetech.core
 			else data = {};
 		}
 		
+		public function toXML():String
+		{
+			return ObjectUtil.convertXML(data, name);
+		}
+		
+		
+		/**
+		 * 
+		 * json格式缓存数据。
+		 * 
+		 */
+		
+		public function toJSON():String
+		{
+			return JSON.stringify(data);
+		}
+		
 		
 		/**
 		 * 初始化操作。
 		 * @private
 		 */
-		private function initialize($data:Object):void
+		private function initialize($data:Object, $name:String):void
 		{
+			name = $name;
 			stor = Store.instance;
 			disc = {}, rela = {};
 			cach = new Map;
@@ -234,18 +258,6 @@ package com.winonetech.core
 		
 		/**
 		 * 
-		 * json格式缓存数据。
-		 * 
-		 */
-		
-		public function get json():String
-		{
-			return JSON.stringify(data);
-		}
-		
-		
-		/**
-		 * 
 		 * 需要加载的相关文件的个数。
 		 * 
 		 */
@@ -316,6 +328,15 @@ package com.winonetech.core
 		 */
 		
 		protected var disc:Object;
+		
+		
+		/**
+		 * 
+		 * 名称
+		 * 
+		 */
+		
+		protected var name:String = "vo";
 		
 		
 		/**
