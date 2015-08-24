@@ -81,6 +81,13 @@ package com.winonetech.core
 			else data = {};
 		}
 		
+		
+		/**
+		 * 
+		 * XML格式缓存数据。
+		 * 
+		 */
+		
 		public function toXML():String
 		{
 			return ObjectUtil.convertXML(data, name);
