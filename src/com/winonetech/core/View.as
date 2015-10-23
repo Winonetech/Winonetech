@@ -124,7 +124,6 @@ package com.winonetech.core
 			
 			removeAllView();
 			
-			wt::data = null;
 		}
 		
 		

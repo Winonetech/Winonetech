@@ -90,7 +90,7 @@ package com.winonetech.core
 		
 		public function toXML():String
 		{
-			return ObjectUtil.convertXML(data, name);
+			return XMLUtil.convert(data, XML, name);
 		}
 		
 		

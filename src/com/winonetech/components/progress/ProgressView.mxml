@@ -4,13 +4,13 @@
 		 xmlns:mx="library://ns.adobe.com/flex/mx"
 		 xmlns:cp="com.winonetech.components.*"
 		 width="300" height="200"
-		 title="剩余： {data.length} 个相关文件。">
+		 title="剩余： {length} 个相关文件。" xmlns:progress="com.winonetech.components.progress.*">
 	<s:List width="100%" height="100%" enabled="false"
 			dataProvider="{list}"
 			skinClass="com.winonetech.skins.DisabledListSkin">
 		<s:itemRenderer>
 			<fx:Component>
-				<cp:ProgressItem/>
+				<progress:ProgressItem/>
 			</fx:Component>
 		</s:itemRenderer>
 	</s:List>
@@ -92,7 +92,8 @@
 							var cache:Cache = data[key];
 							if (playing)
 							{
-								LogUtil.log(data.className + "<" + data.id + ">"+" 优先缓存：" + cache.saveURL + " 剩余：" + data.length);
+								LogUtil.log("优先缓存：" + cache.saveURL + " 剩余：" + data.length);
+								length = data.length;
 								Cache.shift(cache);
 							}
 							cache.addEventListener(CommandEvent.COMMAND_END, handlerCacheEnd);
@@ -154,6 +155,12 @@
 			 */
 			[Bindable]
 			private var list:ArrayCollection = new ArrayCollection;
+			
+			/**
+			 * @private
+			 */
+			[Bindable]
+			private var length:uint;
 			
 			
 			/**
