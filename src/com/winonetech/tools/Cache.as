@@ -6,9 +6,12 @@ package com.winonetech.tools
 	 * 缓存管理器。
 	 * 
 	 */
+	
+	
+	import cn.vision.collections.Map;
 	import cn.vision.consts.Consts;
 	import cn.vision.consts.ProtocolConsts;
-	import cn.vision.collections.Map;
+	import cn.vision.events.pattern.QueueEvent;
 	import cn.vision.net.*;
 	import cn.vision.pattern.core.Command;
 	import cn.vision.pattern.queue.ParallelQueue;
@@ -18,6 +21,7 @@ package com.winonetech.tools
 	import cn.vision.utils.StringUtil;
 	
 	import com.winonetech.consts.PathConsts;
+	import com.winonetech.core.wt;
 	import com.winonetech.utils.CacheUtil;
 	
 	import flash.events.Event;
@@ -83,26 +87,6 @@ package com.winonetech.tools
 		
 		
 		/**
-		 * @inheritDoc
-		 */
-		
-		override protected function commandEnd():void
-		{
-			super.commandEnd();
-		}
-		
-		
-		/**
-		 * @inheritDoc
-		 */
-		
-		override protected function commandStart():void
-		{
-			super.commandStart();
-		}
-		
-		
-		/**
 		 * @private
 		 */
 		private function cache():void
@@ -149,10 +133,12 @@ package com.winonetech.tools
 				loader.addEventListener(IOErrorEvent.IO_ERROR, handlerDefault);
 				loader.addEventListener(ProgressEvent.PROGRESS, handlerProgress);
 				loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR, handlerDefault);
+				loader.timeout = 10;
 				loader.load(request);
 			}
 			else
 			{
+				
 				commandEnd();
 			}
 		}
@@ -185,8 +171,9 @@ package com.winonetech.tools
 				var saveURL:String = CacheUtil.extractURI($url, PathConsts.PATH_FILE);
 				if(!CACH[saveURL])
 				{
-					CACH[saveURL] = new Cache(loadURL, saveURL);
-					queue.execute(CACH[saveURL]);
+					var temp:Cache = new Cache(loadURL, saveURL);
+					CACH[saveURL] = temp;
+					if(!temp.exist) queue.execute(CACH[saveURL]);
 				}
 			}
 			return CACH[saveURL];
@@ -273,15 +260,12 @@ package com.winonetech.tools
 					{
 						if (count++ < 3)
 							saver.save(request);
-						/*else
-							LogSaver.log(TypeConsts.FILE, EventConsts.SAVE_ERROR, RegexpUtil.replaceTag(VSTipConsts.FILE_SAVE_ERROR, saver), null, LogSaver.getTime());*/
 					}
 				};
 				saver.addEventListener(Event.COMPLETE, handler);
 				saver.addEventListener(IOErrorEvent.IO_ERROR, handler);
 				saver.addEventListener(SecurityErrorEvent.SECURITY_ERROR, handler);
 				saver.save(request);
-				
 			}
 			return saver;
 		}
@@ -330,20 +314,17 @@ package com.winonetech.tools
 		 */
 		private function handlerDefault($e:Event = null):void
 		{
-			/*if ($e)
-			{
-				if ($e.type == IOErrorEvent.IO_ERROR)
-					
-					LogSaver.log(TypeConsts.FILE,EventConsts.CACHE_UNEXIST,RegexpUtil.replaceTag(TipConsts.NOTICE_CACHE_UNEXIST, this),null,LogSaver.getTime());
-			}*/
 			if (loader)
 			{
 				loader.removeEventListener(Event.COMPLETE, handlerDefault);
 				loader.removeEventListener(IOErrorEvent.IO_ERROR, handlerDefault);
 				loader.removeEventListener(ProgressEvent.PROGRESS, handlerProgress);
 				loader.removeEventListener(SecurityErrorEvent.SECURITY_ERROR, handlerDefault);
-				loader.close();
 				loader = null;
+			}
+			if ($e.type == IOErrorEvent.IO_ERROR)
+			{
+				wt::message = ($e as IOErrorEvent).text;
 			}
 			commandEnd();
 		}
@@ -358,6 +339,16 @@ package com.winonetech.tools
 		
 		
 		/**
+		 * @private
+		 */
+		private static function parallelStepEnd($e:QueueEvent):void
+		{
+			var cache:Cache = $e.command as Cache;
+			if (cache.reloadCount++ < 2) queue.execute(cache);
+		}
+		
+		
+		/**
 		 * 
 		 * 缓存完毕，文件是否存在。
 		 * 
@@ -366,6 +357,18 @@ package com.winonetech.tools
 		public function get exist():Boolean
 		{
 			return Cache.exist(saveURL);
+		}
+		
+		
+		/**
+		 * 
+		 * 消息。
+		 * 
+		 */
+		
+		public function get message():String
+		{
+			return wt::message;
 		}
 		
 		
@@ -413,7 +416,12 @@ package com.winonetech.tools
 		
 		public static function get queue():ParallelQueue
 		{
-			return parallel || (parallel = new ParallelQueue);
+			if(!parallel)
+			{
+				parallel = new ParallelQueue;
+				parallel.addEventListener(QueueEvent.STEP_END, parallelStepEnd);
+			}
+			return parallel;
 		}
 		
 		
@@ -443,6 +451,15 @@ package com.winonetech.tools
 		
 		/**
 		 * 
+		 * 一个计数，失败后重复加载的次数。
+		 * 
+		 */
+		
+		public var reloadCount:uint = 0;
+		
+		
+		/**
+		 * 
 		 * 加载路径。
 		 * 
 		 */
@@ -463,6 +480,12 @@ package com.winonetech.tools
 		 * @private
 		 */
 		private var loader:Object;
+		
+		
+		/**
+		 * @private
+		 */
+		wt var message:String;
 		
 		
 		/**
