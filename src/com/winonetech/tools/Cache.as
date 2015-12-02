@@ -18,6 +18,7 @@ package com.winonetech.tools
 	import cn.vision.system.VSFile;
 	import cn.vision.utils.ByteArrayUtil;
 	import cn.vision.utils.FileUtil;
+	import cn.vision.utils.LogUtil;
 	import cn.vision.utils.StringUtil;
 	
 	import com.winonetech.consts.PathConsts;
@@ -129,16 +130,16 @@ package com.winonetech.tools
 				}
 				
 				loader = new (b ? HTTPLoader : FTPLoader);
+				loader.timeout = 10;
 				loader.addEventListener(Event.COMPLETE, handlerDefault);
 				loader.addEventListener(IOErrorEvent.IO_ERROR, handlerDefault);
 				loader.addEventListener(ProgressEvent.PROGRESS, handlerProgress);
 				loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR, handlerDefault);
-				loader.timeout = 10;
 				loader.load(request);
 			}
 			else
 			{
-				
+				wt::succeed = true;
 				commandEnd();
 			}
 		}
@@ -169,12 +170,7 @@ package com.winonetech.tools
 			{
 				var loadURL:String = $url;
 				var saveURL:String = CacheUtil.extractURI($url, PathConsts.PATH_FILE);
-				if(!CACH[saveURL])
-				{
-					var temp:Cache = new Cache(loadURL, saveURL);
-					CACH[saveURL] = temp;
-					if(!temp.exist) queue.execute(CACH[saveURL]);
-				}
+				if(!CACH[saveURL]) queue.execute(CACH[saveURL] = new Cache(loadURL, saveURL));
 			}
 			return CACH[saveURL];
 		}
@@ -322,10 +318,8 @@ package com.winonetech.tools
 				loader.removeEventListener(SecurityErrorEvent.SECURITY_ERROR, handlerDefault);
 				loader = null;
 			}
-			if ($e.type == IOErrorEvent.IO_ERROR)
-			{
-				wt::message = ($e as IOErrorEvent).text;
-			}
+			if ($e.type == Event.COMPLETE) wt::succeed = true;
+			else if ($e.type == IOErrorEvent.IO_ERROR) wt::message = ($e as IOErrorEvent).text;
 			commandEnd();
 		}
 		
@@ -344,7 +338,46 @@ package com.winonetech.tools
 		private static function parallelStepEnd($e:QueueEvent):void
 		{
 			var cache:Cache = $e.command as Cache;
-			if (cache.reloadCount++ < 2) queue.execute(cache);
+			if(!cache.succeed)
+			{
+				if (cache.reloadCount++ < 2) 
+				{
+					LogUtil.log("下载失败" + cache.saveURL + "，稍后再次下载");
+					queue.execute(cache);
+				}
+				else
+				{
+					LogUtil.log("下载失败" + cache.saveURL + "，请检查该文件是否存在");
+				}
+			}
+		}
+		
+		/**
+		 * @private
+		 */
+		private static function parallelStepStart($e:QueueEvent):void
+		{
+			var cache:Cache = $e.command as Cache;
+			LogUtil.log((cache.reloadCount == 0 ? "开始下载" : "再次下载"), cache.saveURL);
+		}
+		
+		/**
+		 * @private
+		 */
+		private static function parallelQueueEnd($e:QueueEvent):void
+		{
+			LogUtil.log("文件队列下载结束");
+			LogUtil.log("文件总数：" + total);
+			LogUtil.log("成功：" + success);
+			LogUtil.log("失败：" + failure);
+		}
+		
+		/**
+		 * @private
+		 */
+		private static function parallelQueueStart($e:QueueEvent):void
+		{
+			LogUtil.log("文件队列下载开始");
 		}
 		
 		
@@ -381,6 +414,18 @@ package com.winonetech.tools
 		public function get speed():Number
 		{
 			return loader ? loader.speed : 0;
+		}
+		
+		
+		/**
+		 * 
+		 * 是否下载成功。
+		 * 
+		 */
+		
+		public function get succeed():Boolean
+		{
+			return wt::succeed as Boolean;
 		}
 		
 		
@@ -485,6 +530,11 @@ package com.winonetech.tools
 		/**
 		 * @private
 		 */
+		wt var succeed:Boolean;
+		
+		/**
+		 * @private
+		 */
 		wt var message:String;
 		
 		
@@ -492,6 +542,21 @@ package com.winonetech.tools
 		 * @private
 		 */
 		private static var parallel:ParallelQueue;
+		
+		/**
+		 * @private
+		 */
+		private static var total:uint = 0;
+		
+		/**
+		 * @private
+		 */
+		private static var success:uint = 0;
+		
+		/**
+		 * @private
+		 */
+		private static var failure:uint = 0;
 		
 		
 		/**

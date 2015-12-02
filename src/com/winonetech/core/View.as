@@ -10,6 +10,8 @@ package com.winonetech.core
 	
 	import cn.vision.interfaces.IID;
 	import cn.vision.interfaces.IName;
+	import cn.vision.system.Callback;
+	import cn.vision.utils.ArrayUtil;
 	import cn.vision.utils.ClassUtil;
 	import cn.vision.utils.IDUtil;
 	import cn.vision.utils.LogUtil;
@@ -131,11 +133,12 @@ package com.winonetech.core
 		 * @inheritDoc
 		 */
 		
-		override public function addEventListener($type:String, 
-												  $listener:Function, 
-												  $useCapture:Boolean = false, 
-												  $priority:int = 0, 
-												  $useWeakReference:Boolean = false):void
+		override public function addEventListener(
+			$type:String, 
+			$listener:Function, 
+			$useCapture:Boolean = false, 
+			$priority:int = 0, 
+			$useWeakReference:Boolean = false):void
 		{
 			var l1:Object = listeners[$type] = listeners[$type] || {};
 			var l2:Array = l1[$useCapture] = l1[$useCapture] || [];
@@ -151,9 +154,10 @@ package com.winonetech.core
 		 * @inheritDoc
 		 */
 		
-		override public function removeEventListener($type:String, 
-													 $listener:Function, 
-													 $useCapture:Boolean = false):void
+		override public function removeEventListener(
+			$type:String, 
+			$listener:Function, 
+			$useCapture:Boolean = false):void
 		{
 			var l1:Object = listeners[$type];
 			if (l1)
@@ -250,6 +254,63 @@ package com.winonetech.core
 		
 		
 		/**
+		 * 
+		 * 申请一个回调函数，该操作在设置属性时将会非常有用。<br>
+		 * 该操作需要一个返回 Boolean 类型的函数，回调函数中需要进行必要条件判断才执行下一步操作；
+		 * 调用此操作时，首先在设置属性时会执行一次，如果执行不成功（返回false），则在creationComplete之后再次执行。<br>
+		 * 队列执行顺序为默认为后进先出。
+		 * 
+		 * @param $callback:Function 回调函数。
+		 * @param $priority:Boolean (default = true) 加入后执行的顺序，为true时，会放在队列开头，优先执行，为false时会放在队列末尾。
+		 * @param $args 回调函数的参数。
+		 * 
+		 */
+		
+		protected function applyCallback($callback:Function, $priority:Boolean = true, ...$args):void
+		{
+			var callback:Callback = new Callback($callback, $args);
+			var c:Boolean = callback.call();
+			var l:uint = $args ? $args.length : 0;
+			var different:Function = function($item:Callback, $index:int = 0, $array:Array = null):Boolean
+			{
+				var r:Boolean =($item.callback != $callback);
+				if(!r && l)
+				{
+					r =(l != $item.args.length);
+					if(!r)
+					{
+						for (var i:uint = 0; i < l; i++)
+							if (r =($args[i] != $item.args[i])) break;
+					}
+				}
+				return r;
+			};
+			if (c)
+			{
+				if (callbacks.length)
+				{
+					var i:uint = 0;
+					while (i < callbacks.length)
+					{
+						if(!different(callbacks[i])) callbacks.splice(i, 1);
+						else i++;
+					}
+				}
+			}
+			else
+			{
+				if (callbacks.every(different))
+				{
+					$priority
+						? ArrayUtil.unshift(callbacks, callback)
+						: ArrayUtil.push   (callbacks, callback);
+				}
+			}
+			
+		}
+		
+		
+		/**
 		 * @private
 		 */
 		private function initializeEnvironment():void
@@ -263,6 +324,7 @@ package com.winonetech.core
 			var handlerCreated:Function = function($e:FlexEvent):void
 			{
 				removeEventListener(FlexEvent.CREATION_COMPLETE, handlerCreated, true);
+				while (callbacks.length) callbacks.shift().call();
 				created = true;
 			}
 			addEventListener(FlexEvent.CREATION_COMPLETE, handlerCreated, true, 0, false);
@@ -375,6 +437,11 @@ package com.winonetech.core
 		 * @private
 		 */
 		private const listeners:Object = {};
+		
+		/**
+		 * @private
+		 */
+		private const callbacks:Array = [];
 		
 		
 		/**
