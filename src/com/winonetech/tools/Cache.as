@@ -20,6 +20,7 @@ package com.winonetech.tools
 	import cn.vision.utils.FileUtil;
 	import cn.vision.utils.LogUtil;
 	import cn.vision.utils.StringUtil;
+	import cn.vision.utils.TimerUtil;
 	
 	import com.winonetech.consts.PathConsts;
 	import com.winonetech.core.wt;
@@ -140,7 +141,7 @@ package com.winonetech.tools
 			else
 			{
 				wt::succeed = true;
-				commandEnd();
+				TimerUtil.callLater(10, commandEnd);
 			}
 		}
 		
@@ -170,7 +171,11 @@ package com.winonetech.tools
 			{
 				var loadURL:String = $url;
 				var saveURL:String = CacheUtil.extractURI($url, PathConsts.PATH_FILE);
-				if(!CACH[saveURL]) queue.execute(CACH[saveURL] = new Cache(loadURL, saveURL));
+				if(!CACH[saveURL]) 
+				{
+					total++;
+					queue.execute(CACH[saveURL] = new Cache(loadURL, saveURL));
+				}
 			}
 			return CACH[saveURL];
 		}
@@ -342,13 +347,20 @@ package com.winonetech.tools
 			{
 				if (cache.reloadCount++ < 2) 
 				{
+					failure++;
 					LogUtil.log("下载失败" + cache.saveURL + "，稍后再次下载");
 					queue.execute(cache);
 				}
 				else
 				{
+					FAIL[cache.saveURL] = cache;
 					LogUtil.log("下载失败" + cache.saveURL + "，请检查该文件是否存在");
 				}
+			}
+			else
+			{
+				success++;
+				LogUtil.log("下载成功" + cache.saveURL + "总数：" + total + "剩余：" + (total - success));
 			}
 		}
 		
@@ -464,7 +476,10 @@ package com.winonetech.tools
 			if(!parallel)
 			{
 				parallel = new ParallelQueue;
+				parallel.addEventListener(QueueEvent.STEP_START, parallelStepStart);
 				parallel.addEventListener(QueueEvent.STEP_END, parallelStepEnd);
+				parallel.addEventListener(QueueEvent.QUEUE_START, parallelQueueStart);
+				parallel.addEventListener(QueueEvent.QUEUE_END, parallelQueueEnd);
 			}
 			return parallel;
 		}
@@ -573,6 +588,11 @@ package com.winonetech.tools
 		 * @private
 		 */
 		private static const CACH:Map = new Map;
+		
+		/**
+		 * @private
+		 */
+		private static const FAIL:Map = new Map;
 		
 	}
 }
