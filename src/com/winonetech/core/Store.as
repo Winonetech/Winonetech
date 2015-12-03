@@ -8,8 +8,8 @@ package com.winonetech.core
 	 */
 	
 	
-	import cn.vision.core.VSObject;
 	import cn.vision.collections.Map;
+	import cn.vision.core.VSObject;
 	import cn.vision.errors.SingleTonError;
 	import cn.vision.utils.ArrayUtil;
 	import cn.vision.utils.ClassUtil;
@@ -78,10 +78,11 @@ package com.winonetech.core
 		 * 
 		 * @param $value:* 注册的数据。
 		 * @param $type:Class (default = null) 数据类型，如果为空，则以$value实例的类型为准。
+		 * @param $key:String 存储的键值属性名称
 		 * 
 		 */
 		
-		public function registData($value:*, $type:Class = null):*
+		public function registData($value:*, $type:Class = null, $key:String = "id"):*
 		{
 			$type = $type || ClassUtil.getClass($value);
 			if (ClassUtil.validateSubclass($type, VO))
@@ -100,11 +101,11 @@ package com.winonetech.core
 					} catch(e:Error) {trace(e.getStackTrace())}
 					if (data)
 					{
-						var id:String = StringUtil.isEmpty(data.id) 
-							? String(data.vid) : data.id;
-						map[name][id] = map[name][id] || data;
+						var key:String = StringUtil.isEmpty(data[$key]) 
+							? String(data.vid) : data[$key];
+						map[name][key] = map[name][key] || data;
 					}
-					var result:*  = map[name][id];
+					var result:*  = map[name][key];
 				}
 			}
 			return result;
@@ -153,8 +154,8 @@ package com.winonetech.core
 			{
 				var name:String = retrieveName(type);
 				
-				if(!cla[name]) cla[name] = type;
-				if(!map[name]) map[name] = new Map;
+				cla[name] = cla[name] || type;
+				map[name] = map[name] || new Map;
 			}
 		}
 		
@@ -239,9 +240,8 @@ package com.winonetech.core
 		 */
 		private function validateList($value:*):Boolean
 		{
-			return  ArrayUtil.validate($value) || 
-					$value is XMLList || 
-					$value is Map;
+			return ArrayUtil.validate($value) || 
+					$value is XMLList || $value is Map;
 		}
 		
 		

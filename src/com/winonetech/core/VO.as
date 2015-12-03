@@ -8,8 +8,6 @@ package com.winonetech.core
 	 */
 	
 	
-	import adobe.utils.XMLUI;
-	
 	import cn.vision.collections.Map;
 	import cn.vision.core.VSEventDispatcher;
 	import cn.vision.events.pattern.CommandEvent;
@@ -81,9 +79,16 @@ package com.winonetech.core
 			else data = {};
 		}
 		
+		
+		/**
+		 * 
+		 * XML格式缓存数据。
+		 * 
+		 */
+		
 		public function toXML():String
 		{
-			return ObjectUtil.convertXML(data, name).toXMLString();
+			return XMLUtil.convert(data, XML, name);
 		}
 		
 		
@@ -224,11 +229,9 @@ package com.winonetech.core
 		{
 			var cache:Cache = Cache($e.command);
 			cache.removeEventListener(CommandEvent.COMMAND_END, handlerCacheEnd);
-			if (Cache.exist(cache.saveURL)) 
-			{
-				delete cach[cache.saveURL];
-				if (ready) dispatchEvent(new ControlEvent(ControlEvent.READY));
-			}
+			
+			delete cach[cache.saveURL];
+			if (ready) dispatchEvent(new ControlEvent(ControlEvent.READY));
 		}
 		
 		

@@ -45,7 +45,7 @@ package com.winonetech.controls
 		{
 			super.createChildren();
 			
-			htmlLoader.visible = (location != null);
+			htmlLoader.visible = location as Boolean;
 			htmlLoader.useCache = true;
 			htmlLoader.cacheResponse = true;
 			htmlLoader.idleTimeout = 60;
@@ -186,7 +186,7 @@ package com.winonetech.controls
 		 */
 		private function htmlRender($e:Event):void
 		{
-			DebugUtil.execute(initializeContent);
+			DebugUtil.execute(initializeContent, false);
 		}
 		
 		/**
@@ -378,8 +378,9 @@ package com.winonetech.controls
 				{
 					htmlLoader.visible = Boolean($value);
 					htmlLoader.cancelLoad();
+					if (htmlLoader.visible)
+						super.location = $value;
 				}
-				super.location = $value;
 			}
 		}
 		

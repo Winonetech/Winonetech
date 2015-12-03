@@ -18,7 +18,7 @@ package com.winonetech.tools
 	import flash.events.SQLEvent;
 	
 	
-	public class LogSaver extends Command
+	public class LogSQLite extends Command
 	{
 		
 		/**
@@ -27,7 +27,7 @@ package com.winonetech.tools
 		 * 
 		 */
 		
-		public function LogSaver($args:Array)
+		public function LogSQLite($args:Array)
 		{
 			super();
 			
@@ -42,7 +42,7 @@ package com.winonetech.tools
 		
 		public static function log(...$args):void
 		{
-			queue.execute(new LogSaver($args));
+			queue.execute(new LogSQLite($args));
 		}
 		
 		
