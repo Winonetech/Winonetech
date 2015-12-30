@@ -131,7 +131,7 @@ package com.winonetech.tools
 				}
 				
 				loader = new (b ? HTTPLoader : FTPLoader);
-				loader.timeout = 10;
+				loader.timeout = timeout;
 				loader.addEventListener(Event.COMPLETE, handlerDefault);
 				loader.addEventListener(IOErrorEvent.IO_ERROR, handlerDefault);
 				loader.addEventListener(ProgressEvent.PROGRESS, handlerProgress);
@@ -551,6 +551,9 @@ package com.winonetech.tools
 		 * @private
 		 */
 		wt var message:String;
+		
+		
+		public static var timeout:uint = 10;
 		
 		
 		/**
