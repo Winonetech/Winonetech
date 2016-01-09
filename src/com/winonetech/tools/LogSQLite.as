@@ -54,7 +54,6 @@ package com.winonetech.tools
 		{
 			commandStart();
 			
-			trace.apply(null, args);
 			debug(args);
 		}
 		
@@ -68,7 +67,7 @@ package com.winonetech.tools
 			var dir:VSFile = new VSFile(url);
 			if(!dir.exists) dir.createDirectory();
 			var date:Date = new Date;
-			var name:String = date.fullYear + "-" + (date.month+1) + "-" + date.date + ".sqlite";
+			var name:String = date.fullYear + "-" + (date.month + 1) + "-" + date.date + ".sqlite";
 			url += "/" + name;
 			file = file || new VSFile(url);
 			con.open(file);
@@ -116,8 +115,8 @@ package com.winonetech.tools
 		 * */
 		private  function insertData(evt:SQLEvent = null):void
 		{
-			createStmt.removeEventListener(SQLEvent.RESULT,insertData);
 			var sql:String = "insert into log(type,event,description,memo,time) values ('"+args[0]+"','"+args[1]+"','"+args[2]+"','"+args[3]+"','"+getTime()+"')";
+			createStmt.removeEventListener(SQLEvent.RESULT,insertData);
 			createStmt.text = sql;
 			createStmt.addEventListener(SQLEvent.RESULT, executeEnd);
 			createStmt.execute();
@@ -134,7 +133,7 @@ package com.winonetech.tools
 		/**
 		 * @private
 		 */
-		private static var createStmt:SQLStatement = new SQLStatement;;
+		private static var createStmt:SQLStatement = new SQLStatement;
 		
 		
 		/**
