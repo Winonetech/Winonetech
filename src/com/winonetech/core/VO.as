@@ -13,6 +13,7 @@ package com.winonetech.core
 	import cn.vision.events.pattern.CommandEvent;
 	import cn.vision.utils.ClassUtil;
 	import cn.vision.utils.ObjectUtil;
+	import cn.vision.utils.StringUtil;
 	import cn.vision.utils.XMLUtil;
 	
 	import com.winonetech.events.ControlEvent;
@@ -62,7 +63,7 @@ package com.winonetech.core
 				wt::raw = $data;
 				if ($data is String)
 				{
-					var src:String = String($data);
+					var src:String = StringUtil.trim(String($data));
 					data = XMLUtil.validate(src)
 						?  XMLUtil.convert(XML(src), Object)
 						:  JSON.parse(src);

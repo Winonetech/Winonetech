@@ -101,7 +101,7 @@ package com.winonetech.utils
 		
 		public static function toDate($value:String):Date
 		{
-			return new Date($value.split("-").join("/"));
+			return $value ? new Date($value.split("-").join("/")) : new Date;
 		}
 		
 		

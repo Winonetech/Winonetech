@@ -12,6 +12,7 @@ package com.winonetech.tools
 	import cn.vision.consts.Consts;
 	import cn.vision.consts.ProtocolConsts;
 	import cn.vision.events.pattern.QueueEvent;
+	import cn.vision.managers.ObjectManager;
 	import cn.vision.net.*;
 	import cn.vision.pattern.core.Command;
 	import cn.vision.pattern.queue.ParallelQueue;
@@ -130,7 +131,8 @@ package com.winonetech.tools
 					request = new FTPRequest(h, u, w, p, l, s);
 				}
 				
-				loader = new (b ? HTTPLoader : FTPLoader);
+				loader = b ? new HTTPLoader : ObjectManager.borrow(FTPLoader);
+				
 				loader.timeout = timeout;
 				loader.addEventListener(Event.COMPLETE, handlerDefault);
 				loader.addEventListener(IOErrorEvent.IO_ERROR, handlerDefault);
@@ -321,6 +323,7 @@ package com.winonetech.tools
 				loader.removeEventListener(IOErrorEvent.IO_ERROR, handlerDefault);
 				loader.removeEventListener(ProgressEvent.PROGRESS, handlerProgress);
 				loader.removeEventListener(SecurityErrorEvent.SECURITY_ERROR, handlerDefault);
+				if (loader is FTPLoader) ObjectManager.remand(loader);
 				loader = null;
 			}
 			if ($e.type == Event.COMPLETE) wt::succeed = true;
