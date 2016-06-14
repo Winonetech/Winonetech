@@ -340,7 +340,9 @@ package com.winonetech.core
 				for each (var l2:Array in listeners[l1])
 				{
 					for each (var handler:Function in l2)
+					{
 						super.removeEventListener(l1, handler);
+					}
 				}
 				delete listeners[l1];
 			}
@@ -363,7 +365,7 @@ package com.winonetech.core
 		 * 
 		 */
 		[Bindable]
-		public function get data():WO
+		public function get data():VO
 		{
 			return wt::data;
 		}
@@ -371,7 +373,7 @@ package com.winonetech.core
 		/**
 		 * @private
 		 */
-		public function set data($value:WO):void
+		public function set data($value:VO):void
 		{
 			wt::data = $value;
 			
@@ -450,7 +452,7 @@ package com.winonetech.core
 		/**
 		 * @private
 		 */
-		wt var data:WO;
+		wt var data:VO;
 		
 		/**
 		 * @private
