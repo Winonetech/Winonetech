@@ -71,10 +71,10 @@ package com.winonetech.core
 		
 		/**
 		 * 
-		 * 解析并注册成VO类型的数据。<br>
+		 * 解析并注册成WO类型的数据。<br>
 		 * 如果是列表行数据，则会对列表进行遍历，列表行数据包括Vector，Array，XMLList，Map；<br>
-		 * 如果是XML或Object数据，会构建一个$type类型的VO数据；<br>
-		 * 如果本身是一个VO，会直接存储。
+		 * 如果是XML或Object数据，会构建一个$type类型的WO数据；<br>
+		 * 如果本身是一个WO，会直接存储。
 		 * 
 		 * @param $value:* 注册的数据。
 		 * @param $type:Class (default = null) 数据类型，如果为空，则以$value实例的类型为准。
@@ -85,7 +85,7 @@ package com.winonetech.core
 		public function registData($value:*, $type:Class = null, $key:String = "id"):*
 		{
 			$type = $type || ClassUtil.getClass($value);
-			if (ClassUtil.validateSubclass($type, VO))
+			if (ClassUtil.validateSubclass($type, WO))
 			{
 				var name:String = retrieveName($type);
 				if (validateList($value))
@@ -97,7 +97,7 @@ package com.winonetech.core
 					registType($type);
 					try
 					{
-						var data:VO = ($value is $type) ? $value : new $type($value);
+						var data:WO = ($value is $type) ? $value : new $type($value);
 					} catch(e:Error) {trace(e.getStackTrace())}
 					if (data)
 					{
