@@ -31,12 +31,19 @@ package com.winonetech.utils
 			if(!StringUtil.isEmpty($uri))
 			{
 				var result:String = "";
-				var t:Array = $uri.split("/");
-				var l:uint = t.length;
-				if (l > 3)
+				if ($uri.indexOf("ftp://") == 0 || $uri.indexOf("http://") == 0)
 				{
-					for (var i:int = 3; i < l; i++)
-						result += ("/" +t[i]);
+					var t:Array = $uri.split("/");
+					var l:uint = t.length;
+					if (l > 3)
+					{
+						for (var i:int = 3; i < l; i++)
+							result += ("/" +t[i]);
+					}
+				}
+				else
+				{
+					result = "/" + $uri;
 				}
 				result = StringUtil.isEmpty(prefix) ? result.substr(1) : prefix + result;
 			}

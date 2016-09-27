@@ -11,6 +11,7 @@ package com.winonetech.core
 	import cn.vision.collections.Map;
 	import cn.vision.core.VSEventDispatcher;
 	import cn.vision.events.pattern.CommandEvent;
+	import cn.vision.utils.ArrayUtil;
 	import cn.vision.utils.ClassUtil;
 	import cn.vision.utils.ObjectUtil;
 	import cn.vision.utils.StringUtil;
@@ -28,6 +29,24 @@ package com.winonetech.core
 	 */
 	
 	[Event(name="ready", type="com.winonetech.events.ControlEvent")]
+	
+	
+	/**
+	 * 
+	 * 与该VO相关的处理完成一定的进度时触发。
+	 * 
+	 */
+	
+	[Event(name="progress", type="com.winonetech.events.ControlEvent")]
+	
+	
+	/**
+	 * 
+	 * 与该VO相关的处理完成一定的进度时触发。
+	 * 
+	 */
+	
+	[Event(name="download", type="com.winonetech.events.ControlEvent")]
 	
 	
 	[Bindable]
@@ -79,6 +98,15 @@ package com.winonetech.core
 			}
 			else data = {};
 		}
+		
+		
+		/**
+		 * 
+		 * 更新数据
+		 * 
+		 */
+		
+		public function update(...$args):void { }
 		
 		
 		/**
@@ -214,25 +242,68 @@ package com.winonetech.core
 			for each (var item:* in $args)
 			{
 				var cache:Cache = (item is String) ? Cache.cache(item) : item;
-				if (cache && ! cach[cache.saveURL] && ! Cache.exist(cache.saveURL))
+				if (cache && ! cach[cache.saveURL] && ! cache.exist)
 				{
-					cache.addEventListener(CommandEvent.COMMAND_END, handlerCacheEnd);
+					var handler:Function = function($e:CommandEvent):void
+					{
+						var cache:Cache = Cache($e.command);
+						cache.removeEventListener(CommandEvent.COMMAND_END, handler);
+						
+						delete cach[cache.saveURL];
+						if (ready) dispatchEvent(new ControlEvent(ControlEvent.READY));
+					};
+					cache.addEventListener(CommandEvent.COMMAND_END, handler);
 					cach[cache.saveURL] = cache;
 				}
+			}
+			
+			if (cach.length) dispatchEvent(new ControlEvent(ControlEvent.DOWNLOAD));
+		}
+		
+		
+		/**
+		 * 
+		 * 添加一个子VO。
+		 * 
+		 * @param $child:VO 子VO。
+		 * 
+		 */
+		
+		wt function addChild($child:VO):void
+		{
+			if(!children) wt::children = new Vector.<VO>;
+			if (children.indexOf($child) == -1)
+			{
+				ArrayUtil.push(children, $child);
 			}
 		}
 		
 		
 		/**
-		 * @private
+		 * 
+		 * 删除一个子VO。
+		 * 
+		 * @param $child:VO 子VO。
+		 * 
 		 */
-		private function handlerCacheEnd($e:CommandEvent):void
+		
+		wt function delChild($child:VO):void
 		{
-			var cache:Cache = Cache($e.command);
-			cache.removeEventListener(CommandEvent.COMMAND_END, handlerCacheEnd);
-			
-			delete cach[cache.saveURL];
-			if (ready) dispatchEvent(new ControlEvent(ControlEvent.READY));
+			if(!children) wt::children = new Vector.<VO>;
+			var index:int = children.indexOf($child);
+			if (index != -1) children.splice(index, 1);
+		}
+		
+		
+		/**
+		 * 
+		 * 子组件数组。
+		 * 
+		 */
+		
+		public function get children():Vector.<VO>
+		{
+			return wt::children;
 		}
 		
 		
@@ -296,7 +367,9 @@ package com.winonetech.core
 		 */
 		public function set parent($value:VO):void
 		{
+			if (parent) parent.wt::delChild(this);
 			wt::parent = $value;
+			if (parent) parent.wt::addChild(this);
 		}
 		
 		
@@ -320,8 +393,29 @@ package com.winonetech.core
 		
 		public function get ready():Boolean
 		{
-			return ! cach.length;
+			var result:Boolean = true;
+			if (children)
+			{
+				for each (var child:VO in children)
+				{
+					if(!child.ready)
+					{
+						result = false;
+						break;
+					}
+				}
+			}
+			return result && (!cach.length);
 		}
+		
+		
+		/**
+		 * 
+		 * 存储提示信息。
+		 * 
+		 */
+		
+		public var tip:Object;
 		
 		
 		/**
@@ -344,6 +438,15 @@ package com.winonetech.core
 		
 		/**
 		 * 
+		 * 文件缓存字典。
+		 * 
+		 */
+		
+		protected var cach:Map;
+		
+		
+		/**
+		 * 
 		 * 名称
 		 * 
 		 */
@@ -362,11 +465,11 @@ package com.winonetech.core
 		 */
 		private var stor:Store;
 		
+		
 		/**
 		 * @private
 		 */
-		private var cach:Map;
-		
+		wt var children:Vector.<VO>;
 		
 		/**
 		 * @private

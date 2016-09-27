@@ -9,10 +9,10 @@ package com.winonetech.tools
 	
 	
 	import cn.vision.collections.Map;
+	import cn.vision.consts.CommandPriorityConsts;
 	import cn.vision.consts.Consts;
 	import cn.vision.consts.ProtocolConsts;
 	import cn.vision.events.pattern.QueueEvent;
-	import cn.vision.managers.ObjectManager;
 	import cn.vision.net.*;
 	import cn.vision.pattern.core.Command;
 	import cn.vision.pattern.queue.ParallelQueue;
@@ -31,7 +31,9 @@ package com.winonetech.tools
 	import flash.events.IOErrorEvent;
 	import flash.events.ProgressEvent;
 	import flash.events.SecurityErrorEvent;
+	import flash.events.TimerEvent;
 	import flash.utils.ByteArray;
+	import flash.utils.Timer;
 	
 	
 	/**
@@ -45,117 +47,6 @@ package com.winonetech.tools
 	
 	public class Cache extends Command
 	{
-		
-		/**
-		 * 
-		 * <code>Cache</code>构造函数。
-		 * 
-		 * @param $loadURL:String 加载路径。
-		 * @param $saveURL:String 相对存储路径。
-		 * 
-		 */
-		
-		public function Cache($loadURL:String = null, $saveURL:String = null)
-		{
-			super();
-			
-			initialize($loadURL, $saveURL);
-		}
-		
-		
-		/**
-		 * 
-		 * 停止当前下载的进程。
-		 * 
-		 */
-		
-		override public function close():void
-		{
-			executing && handlerDefault();
-		}
-		
-		
-		/**
-		 * 
-		 * 执行命令加载文件至本地。
-		 * 
-		 */
-		
-		override public function execute():void
-		{
-			commandStart();
-			
-			cache();
-		}
-		
-		
-		/**
-		 * @private
-		 */
-		private function cache():void
-		{
-			if(!exist)
-			{
-				var protocol:String = String(loadURL.split("://")[0]).toLowerCase();
-				var b:Boolean = protocol == ProtocolConsts.HTTP;
-				var l:String = b ? loadURL : CacheUtil.extractURI(loadURL);
-				var s:String = FileUtil.resolvePathApplication(saveURL);
-				if (b)
-				{
-					var request:Object = new HTTPRequest(l, s);
-				}
-				else
-				{
-					if (DFTP[Consts.INIT])
-					{
-						var h:String = DFTP.host;
-						var u:String = DFTP.user;
-						var w:String = DFTP.pass;
-						var p:uint   = DFTP.port || 21;
-					}
-					else
-					{
-						var t1:Array = loadURL.split("/");
-						if (t1[2]) var t2:Array = t1[2].split("@");
-						if (t1[2] && t2.length == 2)
-						{
-							//分解如ftp:FTPMedia@192.168.1.21:21的字符串。
-							var t3:Array = t2[0].split(":");
-							var t4:Array = t2[1].split(":");
-							h = t4[0];
-							u = t3[0];
-							w = t3[1];
-							p = t4[1] || 21;
-						}
-					}
-					request = new FTPRequest(h, u, w, p, l, s);
-				}
-				
-				loader = b ? new HTTPLoader : ObjectManager.borrow(FTPLoader);
-				
-				loader.timeout = timeout;
-				loader.addEventListener(Event.COMPLETE, handlerDefault);
-				loader.addEventListener(IOErrorEvent.IO_ERROR, handlerDefault);
-				loader.addEventListener(ProgressEvent.PROGRESS, handlerProgress);
-				loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR, handlerDefault);
-				loader.load(request);
-			}
-			else
-			{
-				wt::succeed = true;
-				TimerUtil.callLater(10, commandEnd);
-			}
-		}
-		
-		/**
-		 * @private
-		 */
-		private function initialize($loadURL:String, $saveURL:String):void
-		{
-			loadURL = $loadURL;
-			saveURL = $saveURL;
-		}
-		
 		
 		/**
 		 * 
@@ -173,13 +64,49 @@ package com.winonetech.tools
 			{
 				var loadURL:String = $url;
 				var saveURL:String = CacheUtil.extractURI($url, PathConsts.PATH_FILE);
-				if(!CACH[saveURL]) 
+				
+				var cache:Cache = (CACH[saveURL] = CACH[saveURL] || new Cache(loadURL, saveURL));
+				//cahe文件不存在，cache没有执行，cache不在队列中
+				if((!cache.exist) && (!cache.executing) && queue.indexOf(cache) == -1)
 				{
-					total++;
-					queue.execute(CACH[saveURL] = new Cache(loadURL, saveURL));
+					switch(FileUtil.getFileTypeByURL(saveURL).toLowerCase())
+					{
+						case "jpg":
+						case "jpeg":
+						case "png":
+						case "zip":
+							cache.priority = CommandPriorityConsts.HIGH;
+							break;
+						default:
+							cache.priority = CommandPriorityConsts.NORMAL;
+							break;
+					}
+					
+					queue.execute(cache);
+					total ++;
 				}
 			}
 			return CACH[saveURL];
+		}
+		
+		
+		/**
+		 * 
+		 * 执行下载队列。
+		 * 
+		 */
+		
+		public static function start():void
+		{
+			if(!queue.executing) queue.execute();
+			else
+			{
+				LogUtil.log("正在下载的文件个数：", queue.executingCommands.length);
+				for each (var item:Cache in queue.executingCommands)
+				{
+					LogUtil.log("文件：" + item.saveURL + "，" + item.speed + "，" + item.percent);
+				}
+			}
 		}
 		
 		
@@ -313,6 +240,116 @@ package com.winonetech.tools
 		
 		
 		/**
+		 * 
+		 * <code>Cache</code>构造函数。
+		 * 
+		 * @param $loadURL:String 加载路径。
+		 * @param $saveURL:String 相对存储路径。
+		 * 
+		 */
+		
+		public function Cache($loadURL:String = null, $saveURL:String = null)
+		{
+			super();
+			
+			initialize($loadURL, $saveURL);
+		}
+		
+		
+		/**
+		 * 
+		 * 停止当前下载的进程。
+		 * 
+		 */
+		
+		override public function close():void
+		{
+			executing && handlerDefault();
+		}
+		
+		
+		/**
+		 * 
+		 * 执行命令加载文件至本地。
+		 * 
+		 */
+		
+		override public function execute():void
+		{
+			commandStart();
+			
+			cache();
+		}
+		
+		
+		/**
+		 * @private
+		 */
+		private function cache():void
+		{
+			if(!exist)
+			{
+				var protocol:String = String(loadURL.split("://")[0]).toLowerCase();
+				var b:Boolean = protocol == ProtocolConsts.HTTP;
+				var l:String = b ? loadURL : CacheUtil.extractURI(loadURL);
+				var s:String = FileUtil.resolvePathApplication(saveURL);
+				if (b)
+				{
+					var request:Object = new HTTPRequest(l, s);
+				}
+				else
+				{
+					if (DFTP[Consts.INIT])
+					{
+						var h:String = DFTP.host;
+						var u:String = DFTP.user;
+						var w:String = DFTP.pass;
+						var p:uint   = DFTP.port || 21;
+					}
+					else
+					{
+						var t1:Array = loadURL.split("/");
+						if (t1[2]) var t2:Array = t1[2].split("@");
+						if (t1[2] && t2.length == 2)
+						{
+							//分解如ftp:FTPMedia@192.168.1.21:21的字符串。
+							var t3:Array = t2[0].split(":");
+							var t4:Array = t2[1].split(":");
+							h = t4[0];
+							u = t3[0];
+							w = t3[1];
+							p = t4[1] || 21;
+						}
+					}
+					request = new FTPRequest(h, u, w, p, l, s);
+				}
+				
+				loader = new (b ? HTTPLoader : FTPLoader);
+				
+				loader.timeout = timeout;
+				loader.addEventListener(Event.COMPLETE, handlerDefault);
+				loader.addEventListener(IOErrorEvent.IO_ERROR, handlerDefault);
+				loader.addEventListener(ProgressEvent.PROGRESS, handlerProgress);
+				loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR, handlerDefault);
+				loader.load(request);
+			}
+			else
+			{
+				TimerUtil.callLater(1, commandEnd);
+			}
+		}
+		
+		/**
+		 * @private
+		 */
+		private function initialize($loadURL:String, $saveURL:String):void
+		{
+			loadURL = $loadURL;
+			saveURL = $saveURL;
+		}
+		
+		
+		/**
 		 * @private
 		 */
 		private function handlerDefault($e:Event = null):void
@@ -323,11 +360,24 @@ package com.winonetech.tools
 				loader.removeEventListener(IOErrorEvent.IO_ERROR, handlerDefault);
 				loader.removeEventListener(ProgressEvent.PROGRESS, handlerProgress);
 				loader.removeEventListener(SecurityErrorEvent.SECURITY_ERROR, handlerDefault);
-				if (loader is FTPLoader) ObjectManager.remand(loader);
+				if (loader is FTPLoader) 
+				{
+					code = loader.code;
+				}
 				loader = null;
 			}
-			if ($e.type == Event.COMPLETE) wt::succeed = true;
-			else if ($e.type == IOErrorEvent.IO_ERROR) wt::message = ($e as IOErrorEvent).text;
+			
+			switch ($e.type)
+			{
+				case Event.COMPLETE:
+					wt::succeed = true;
+					break;
+				case IOErrorEvent.IO_ERROR:
+				case SecurityErrorEvent.SECURITY_ERROR:
+					wt::message = Object($e).text;
+					break;
+			}
+			
 			commandEnd();
 		}
 		
@@ -346,24 +396,35 @@ package com.winonetech.tools
 		private static function parallelStepEnd($e:QueueEvent):void
 		{
 			var cache:Cache = $e.command as Cache;
-			if(!cache.succeed)
+			if(!cache.exist)
 			{
-				if (cache.reloadCount++ < 2) 
+				if (cache.reloadCount++ < 5) 
 				{
-					failure++;
-					LogUtil.log("下载失败" + cache.saveURL + "，稍后再次下载");
-					queue.execute(cache);
+					if (cache.code == "530")
+					{
+						LogUtil.log("下载失败：" + cache.code + "，" + cache.saveURL + "，" + cache.message);
+						cache.reloadCount = 0;
+					}
+					else
+					{
+						LogUtil.log("下载失败：" + cache.code + "，" + cache.saveURL + "，稍后再次下载，" + cache.message);
+						queue.execute(cache);
+					}
 				}
 				else
 				{
+					failure++;
 					FAIL[cache.saveURL] = cache;
-					LogUtil.log("下载失败" + cache.saveURL + "，请检查该文件是否存在");
+					LogUtil.log("下载失败：" + cache.code + "，" + cache.saveURL + "，可能是网络问题。");
 				}
 			}
 			else
 			{
-				success++;
-				LogUtil.log("下载成功" + cache.saveURL + "总数：" + total + "剩余：" + (total - success));
+				if (cache.succeed)
+				{
+					success++;
+					LogUtil.log("下载成功" + cache.saveURL + "总数：" + total + "剩余：" + (queue.lave + queue.num));
+				}
 			}
 		}
 		
@@ -385,6 +446,8 @@ package com.winonetech.tools
 			LogUtil.log("文件总数：" + total);
 			LogUtil.log("成功：" + success);
 			LogUtil.log("失败：" + failure);
+			
+			reloadLater();
 		}
 		
 		/**
@@ -393,6 +456,36 @@ package com.winonetech.tools
 		private static function parallelQueueStart($e:QueueEvent):void
 		{
 			LogUtil.log("文件队列下载开始");
+		}
+		
+		
+		/**
+		 * @private
+		 */
+		private static function reloadLater():void
+		{
+			if (FAIL.length) 
+			{
+				var timer:Timer = new Timer(60000, 60);
+				var handler:Function = function(e:TimerEvent):void
+				{
+					timer.removeEventListener(TimerEvent.TIMER_COMPLETE, handler);
+					timer.stop();
+					timer = null;
+					
+					reloadFailures();
+				};
+				timer.addEventListener(TimerEvent.TIMER_COMPLETE, handler);
+				timer.start();
+			}
+		}
+		
+		/**
+		 * @private
+		 */
+		private static function reloadFailures():void
+		{
+			for each (var item:Cache in FAIL) queue.execute(item);
 		}
 		
 		
@@ -446,13 +539,28 @@ package com.winonetech.tools
 		
 		/**
 		 * 
+		 * 额外的信息。
+		 * 
+		 */
+		
+		public var extra:Object;
+		
+		
+		/**
+		 * 
 		 * 下载百分比。
 		 * 
 		 */
 		
 		public function get percent():Number
 		{
-			return loader ? loader.bytesLoaded / loader.bytesTotal : 0;
+			var result:Number = 0;
+			if (loader)
+			{
+				result = loader.bytesLoaded / loader.bytesTotal;
+				if (isNaN(result)) result = 0;
+			}
+			return result;
 		}
 		
 		
@@ -480,9 +588,10 @@ package com.winonetech.tools
 			{
 				parallel = new ParallelQueue;
 				parallel.addEventListener(QueueEvent.STEP_START, parallelStepStart);
-				parallel.addEventListener(QueueEvent.STEP_END, parallelStepEnd);
+				parallel.addEventListener(QueueEvent.STEP_END, parallelStepEnd, false, uint.MAX_VALUE);
 				parallel.addEventListener(QueueEvent.QUEUE_START, parallelQueueStart);
 				parallel.addEventListener(QueueEvent.QUEUE_END, parallelQueueEnd);
+				parallel.immediateExecute = false;
 			}
 			return parallel;
 		}
@@ -532,6 +641,15 @@ package com.winonetech.tools
 		
 		/**
 		 * 
+		 * 一个提示编码，此编码通常由服务端返回。
+		 * 
+		 */
+		
+		public var code:String;
+		
+		
+		/**
+		 * 
 		 * 存储路径。
 		 * 
 		 */
@@ -555,6 +673,12 @@ package com.winonetech.tools
 		 */
 		wt var message:String;
 		
+		
+		/**
+		 * 
+		 * 超时时间。
+		 * 
+		 */
 		
 		public static var timeout:uint = 10;
 		

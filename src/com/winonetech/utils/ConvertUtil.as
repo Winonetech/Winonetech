@@ -28,7 +28,7 @@ package com.winonetech.utils
 		
 		public static function toBoolean($value:String):Boolean
 		{
-			return ! ($value == "False" || $value == "false" || $value == "0" || $value == "");
+			return ! (!$value || $value == "False" || $value == "false" || $value == "0" || $value == "");
 		}
 		
 		
@@ -64,7 +64,8 @@ package com.winonetech.utils
 		
 		public static function toNumber($value:String):Number
 		{
-			return Number($value);
+			var num:Number = Number($value);
+			return isNaN(num) ? 0 : num;
 		}
 		
 		
@@ -119,6 +120,22 @@ package com.winonetech.utils
 		{
 			if ($value && $value.charAt(0) == "#") $value = "0x" + $value.substr(1);
 			return uint($value);
+		}
+		
+		
+		/**
+		 * 
+		 * 不做转换。
+		 * 
+		 * @param $value 转换的值。
+		 * 
+		 * @return Object
+		 * 
+		 */
+		
+		public static function toObject($value:*):Object
+		{
+			return $value;
 		}
 		
 	}

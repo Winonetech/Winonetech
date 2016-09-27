@@ -10,17 +10,13 @@ package com.winonetech.core
 	
 	import cn.vision.interfaces.IID;
 	import cn.vision.interfaces.IName;
-	import cn.vision.system.Callback;
-	import cn.vision.utils.ArrayUtil;
 	import cn.vision.utils.ClassUtil;
 	import cn.vision.utils.IDUtil;
 	import cn.vision.utils.LogUtil;
 	
 	import com.winonetech.events.ControlEvent;
 	
-	import mx.events.FlexEvent;
-	
-	import spark.components.Group;
+	import flash.geom.Rectangle;
 	
 	
 	/**
@@ -41,7 +37,16 @@ package com.winonetech.core
 	[Event(name="stop", type="com.winonetech.events.ControlEvent")]
 	
 	
-	public class View extends Group implements IName, IID
+	/**
+	 * 
+	 * 结束播放时触发。
+	 * 
+	 */
+	
+	[Event(name="ready", type="com.winonetech.events.ControlEvent")]
+	
+	
+	public class View extends Vessel implements IName, IID
 	{
 		
 		/**
@@ -66,9 +71,9 @@ package com.winonetech.core
 		 * 
 		 */
 		
-		public function play($evt:Boolean = true):void
+		public function play($evt:Boolean = true, $force:Boolean = false):void
 		{
-			if(!wt::playing)
+			if(!wt::playing || $force)
 			{
 				wt::playing = true;
 				$evt && dispatchEvent(new ControlEvent(ControlEvent.PLAY));
@@ -95,18 +100,47 @@ package com.winonetech.core
 		 * 
 		 */
 		
-		public function stop($evt:Boolean = true):void
+		public function stop($evt:Boolean = true, $rect:Rectangle = null, $force:Boolean = false):void
 		{
-			if (wt::playing)
+			if (wt::playing || $force)
 			{
 				wt::playing = false;
-				for each (var view:View in views) view.stop($evt);
+				
+				stopRect = $rect;
+				
+				stopForce = $force;
 				
 				processStop();
 				
+				for each (var item:View in views)
+				{
+					var rect:Rectangle = new Rectangle(item.x, item.y, item.width, item.height);
+					var bool:Boolean = $rect ? $rect.intersects(rect) : false;
+					if ((!$rect) || bool)
+					{
+						item.stop($evt);
+						stops[item.vid] = item;
+					}
+				}
 				
 				$evt && dispatchEvent(new ControlEvent(ControlEvent.STOP));
 			}
+		}
+		
+		
+		/**
+		 * 
+		 * 恢复原状。
+		 * 
+		 */
+		
+		public function resume():void
+		{
+			processResume();
+			
+			for each (var item:View in stops) item.resume();
+			
+			stops = {};
 		}
 		
 		
@@ -125,55 +159,6 @@ package com.winonetech.core
 			for each (var view:View in views) view.reset();
 			
 			removeAllView();
-			
-		}
-		
-		
-		/**
-		 * @inheritDoc
-		 */
-		
-		override public function addEventListener(
-			$type:String, 
-			$listener:Function, 
-			$useCapture:Boolean = false, 
-			$priority:int = 0, 
-			$useWeakReference:Boolean = false):void
-		{
-			var l1:Object = listeners[$type] = listeners[$type] || {};
-			var l2:Array = l1[$useCapture] = l1[$useCapture] || [];
-			if (l2.indexOf($listener) == -1)
-			{
-				l2[l2.length] = $listener;
-				super.addEventListener($type, $listener, $useCapture, $priority, $useWeakReference);
-			}
-		}
-		
-		
-		/**
-		 * @inheritDoc
-		 */
-		
-		override public function removeEventListener(
-			$type:String, 
-			$listener:Function, 
-			$useCapture:Boolean = false):void
-		{
-			var l1:Object = listeners[$type];
-			if (l1)
-			{
-				var l2:Array = l1[$useCapture];
-				if (l2)
-				{
-					var index:int = l2.indexOf($listener);
-					if (index!= -1) 
-					{
-						super.removeEventListener($type, $listener, $useCapture);
-						l2.splice(index, 1);
-						if(!l2.length) delete l1[$useCapture];
-					}
-				}
-			}
 		}
 		
 		
@@ -193,6 +178,15 @@ package com.winonetech.core
 		 */
 		
 		protected function processStop():void { }
+		
+		
+		/**
+		 * 
+		 * 恢复处理。
+		 * 
+		 */
+		
+		protected function processResume():void { }
 		
 		
 		/**
@@ -250,64 +244,22 @@ package com.winonetech.core
 		protected function removeAllView():void
 		{
 			views = {};
+			stops = {};
 		}
 		
 		
 		/**
 		 * 
-		 * 申请一个回调函数，该操作在设置属性时将会非常有用。<br>
-		 * 该操作需要一个返回 Boolean 类型的函数，回调函数中需要进行必要条件判断才执行下一步操作；
-		 * 调用此操作时，首先在设置属性时会执行一次，如果执行不成功（返回false），则在creationComplete之后再次执行。<br>
-		 * 队列执行顺序为默认为后进先出。
-		 * 
-		 * @param $callback:Function 回调函数。
-		 * @param $priority:Boolean (default = true) 加入后执行的顺序，为true时，会放在队列开头，优先执行，为false时会放在队列末尾。
-		 * @param $args 回调函数的参数。
+		 * 发送rady。
 		 * 
 		 */
 		
-		protected function applyCallback($callback:Function, $priority:Boolean = true, ...$args):void
+		protected function dispatchReady():void
 		{
-			var callback:Callback = new Callback($callback, $args);
-			var c:Boolean = callback.call();
-			var l:uint = $args ? $args.length : 0;
-			var different:Function = function($item:Callback, $index:int = 0, $array:Array = null):Boolean
-			{
-				var r:Boolean =($item.callback != $callback);
-				if(!r && l)
-				{
-					r =(l != $item.args.length);
-					if(!r)
-					{
-						for (var i:uint = 0; i < l; i++)
-							if (r =($args[i] != $item.args[i])) break;
-					}
-				}
-				return r;
-			};
-			if (c)
-			{
-				if (callbacks.length)
-				{
-					var i:uint = 0;
-					while (i < callbacks.length)
-					{
-						if(!different(callbacks[i])) callbacks.splice(i, 1);
-						else i++;
-					}
-				}
-			}
-			else
-			{
-				if (callbacks.every(different))
-				{
-					$priority
-						? ArrayUtil.unshift(callbacks, callback)
-						: ArrayUtil.push   (callbacks, callback);
-				}
-			}
-			
+			wt::ready = true;
+			dispatchEvent(new ControlEvent(ControlEvent.READY))
 		}
+		
 		
 		
 		/**
@@ -320,32 +272,7 @@ package com.winonetech.core
 			
 			clipAndEnableScrolling = true;
 			views = {};
-			
-			var handlerCreated:Function = function($e:FlexEvent):void
-			{
-				removeEventListener(FlexEvent.CREATION_COMPLETE, handlerCreated, true);
-				while (callbacks.length) callbacks.shift().call();
-				created = true;
-			}
-			addEventListener(FlexEvent.CREATION_COMPLETE, handlerCreated, true, 0, false);
-		}
-		
-		/**
-		 * @private
-		 */
-		private function removeAllEventListeners():void
-		{
-			for (var l1:String in listeners)
-			{
-				for each (var l2:Array in listeners[l1])
-				{
-					for each (var handler:Function in l2)
-					{
-						super.removeEventListener(l1, handler);
-					}
-				}
-				delete listeners[l1];
-			}
+			stops = {};
 		}
 		
 		
@@ -375,6 +302,8 @@ package com.winonetech.core
 		 */
 		public function set data($value:VO):void
 		{
+			wt::ready = false;
+			
 			wt::data = $value;
 			
 			resolveData();
@@ -412,6 +341,30 @@ package com.winonetech.core
 		
 		
 		/**
+		 * 
+		 * 是否在缓动过程中。
+		 * 
+		 */
+		
+		public function get tweening():Boolean
+		{
+			return wt::tweening as Boolean;
+		}
+		
+		
+		/**
+		 * 
+		 * 是否已经准备完毕。
+		 * 
+		 */
+		
+		public function get ready():Boolean
+		{
+			return wt::ready as Boolean;
+		}
+		
+		
+		/**
 		 * @inheritDoc
 		 */
 		
@@ -422,9 +375,21 @@ package com.winonetech.core
 		
 		
 		/**
-		 * @private
+		 * 
+		 * 是否在缓动过程中。
+		 * 
 		 */
-		protected var created:Boolean;
+		
+		protected var stopRect:Rectangle;
+		
+		
+		/**
+		 * 
+		 * 是否在缓动过程中。
+		 * 
+		 */
+		
+		protected var stopForce:Boolean;
 		
 		
 		/**
@@ -432,17 +397,21 @@ package com.winonetech.core
 		 */
 		private var views:Object;
 		
+		/**
+		 * @private
+		 */
+		private var stops:Object;
+		
 		
 		/**
 		 * @private
 		 */
-		private const listeners:Object = {};
+		wt var tweening:Boolean;
 		
 		/**
 		 * @private
 		 */
-		private const callbacks:Array = [];
-		
+		wt var ready:Boolean;
 		
 		/**
 		 * @private

@@ -10,6 +10,8 @@ package com.winonetech.events
 	
 	import cn.vision.core.VSEvent;
 	
+	import com.winonetech.core.wt;
+	
 	
 	public final class ControlEvent extends VSEvent
 	{
@@ -24,9 +26,23 @@ package com.winonetech.events
 		 * 
 		 */
 		
-		public function ControlEvent($type:String, $bubbles:Boolean = false, $cancelable:Boolean = false)
+		public function ControlEvent($type:String, $message:String = null, $bubbles:Boolean = false, $cancelable:Boolean = false)
 		{
 			super($type, $bubbles, $cancelable);
+			
+			wt::message = $message;
+		}
+		
+		
+		/**
+		 * 
+		 * 消息。
+		 * 
+		 */
+		
+		public function get message():String
+		{
+			return wt::message;
 		}
 		
 		
@@ -64,6 +80,48 @@ package com.winonetech.events
 		 */
 		
 		public static const READY:String = "ready";
+		
+		
+		/**
+		 * 
+		 * 出错时触发。<br>
+		 * ERROR常量定义ERROR事件的<code>type</code>属性值。
+		 * 
+		 * @default error
+		 * 
+		 */
+		
+		public static const ERROR:String = "error";
+		
+		
+		/**
+		 * 
+		 * 正在进行时。<br>
+		 * PROGRESS常量定义PROGRESS事件的<code>type</code>属性值。
+		 * 
+		 * @default progress
+		 * 
+		 */
+		
+		public static const PROGRESS:String = "progress";
+		
+		
+		/**
+		 * 
+		 * 下载文件。<br>
+		 * DOWNLOAD常量定义DOWNLOAD事件的<code>type</code>属性值。
+		 * 
+		 * @default download
+		 * 
+		 */
+		
+		public static const DOWNLOAD:String = "download";
+		
+		
+		/**
+		 * @private
+		 */
+		wt var message:String;
 		
 	}
 }

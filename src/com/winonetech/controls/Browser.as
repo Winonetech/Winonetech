@@ -165,12 +165,12 @@ package com.winonetech.controls
 		{
 			addEventListener(Event.HTML_RENDER, htmlRender, true);
 			addEventListener(Event.COMPLETE, htmlComplete, true);
+			
 			clearProperties();
 			caculateBounds();
-			var backable:Boolean = historyPosition > 0;
-			wt::historyBackwardable = backable;
-			var forwardable:Boolean = historyPosition < historyLength - 1;
-			wt::historyForwardable = forwardable;
+			
+			wt::historyBackwardable = historyPosition > 0;
+			wt::historyForwardable = historyPosition < historyLength - 1;
 		}
 		
 		/**
@@ -379,7 +379,9 @@ package com.winonetech.controls
 					htmlLoader.visible = Boolean($value);
 					htmlLoader.cancelLoad();
 					if (htmlLoader.visible)
+					{
 						super.location = $value;
+					}
 				}
 			}
 		}
