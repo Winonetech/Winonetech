@@ -398,7 +398,7 @@ package com.winonetech.tools
 			var cache:Cache = $e.command as Cache;
 			if(!cache.exist)
 			{
-				if (cache.reloadCount++ < 5) 
+				if (cache.reloadCount++ < 3)
 				{
 					if (cache.code == "530")
 					{
@@ -408,6 +408,7 @@ package com.winonetech.tools
 					else
 					{
 						LogUtil.log("下载失败：" + cache.code + "，" + cache.saveURL + "，稍后再次下载，" + cache.message);
+						cache.priority = CommandPriorityConsts.NORMAL;
 						queue.execute(cache);
 					}
 				}
@@ -415,7 +416,7 @@ package com.winonetech.tools
 				{
 					failure++;
 					FAIL[cache.saveURL] = cache;
-					LogUtil.log("下载失败：" + cache.code + "，" + cache.saveURL + "，可能是网络问题。");
+					LogUtil.log("下载失败：" + cache.code + "，" + cache.saveURL + "，网络较慢，FTP服务器无响应。");
 				}
 			}
 			else
