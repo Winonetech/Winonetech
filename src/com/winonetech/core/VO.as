@@ -165,16 +165,16 @@ package com.winonetech.core
 		 * 
 		 * @param $name:String 属性名称。
 		 * @param $type:Class 数据类型。
-		 * @param $qualified:Boolean 是否获取完全限定名。
+		 * @param ...$args 其他转换所需要的参数。
 		 * 
 		 * @return * 属性值。
 		 * 
 		 */
 		
-		protected function getProperty($name:String, $type:Class = null, $qualified:Boolean = false):*
+		protected function getProperty($name:String, $type:Class = null, ...$args):*
 		{
-			var convert:Function = ConvertUtil["to" + ClassUtil.getClassName($type, $qualified)] || ConvertUtil.toString;
-			return disc[$name] || (disc[$name] = convert(data[$name]));
+			ArrayUtil.unshift($args, data[$name], $type);
+			return disc[$name] || (disc[$name] = ObjectUtil.convert.apply(null, $args));
 		}
 		
 		
