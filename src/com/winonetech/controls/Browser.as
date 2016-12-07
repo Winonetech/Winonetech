@@ -45,7 +45,7 @@ package com.winonetech.controls
 		{
 			super.createChildren();
 			
-			htmlLoader.visible = location as Boolean;
+			htmlLoader.visible = Boolean(location);
 			htmlLoader.useCache = true;
 			htmlLoader.cacheResponse = true;
 			htmlLoader.idleTimeout = 60;
@@ -63,11 +63,15 @@ package com.winonetech.controls
 		{
 			if (document)
 			{
-				document.onselectstart = function():*{return selectable;};
+				if(!document.onselectstart)document.onselectstart = function():*{return selectable;};
 				if(!title) wt::title = document.getElementsByTagName("title")[0].innerText;
 				if(!body ) wt::body  = document.getElementsByTagName("body")[0];
-				if (body)  body.onmousedown = bodyMouseDown;
-				if(body && title) removeEventListener(Event.HTML_RENDER, htmlRender);
+				if (body)  
+				{
+					if (body.onmousedown!= bodyMouseDown)
+						body.onmousedown = bodyMouseDown;
+					if (title) removeEventListener(Event.HTML_RENDER, htmlRender, true);
+				}
 			}
 			else
 			{
@@ -83,10 +87,10 @@ package com.winonetech.controls
 			if ($content)
 			{
 				//trace("analyzeContent");
-				DebugUtil.execute(analyzeInput, false, $content);
-				DebugUtil.execute(analyzeArea , false, $content);
-				DebugUtil.execute(analyzeFrame, false, $content, "frame");
-				DebugUtil.execute(analyzeFrame, false, $content, "iframe");
+				DebugUtil.execute(analyzeInput, true, $content);
+				DebugUtil.execute(analyzeArea , true, $content);
+				DebugUtil.execute(analyzeFrame, true, $content, "frame");
+				DebugUtil.execute(analyzeFrame, true, $content, "iframe");
 			}
 		}
 		
@@ -374,15 +378,13 @@ package com.winonetech.controls
 			if(!HTTPUtil.validateIdentical(location, $value))
 			{
 				clearProperties();
+				
 				if (htmlLoader) 
 				{
 					htmlLoader.visible = Boolean($value);
 					htmlLoader.cancelLoad();
-					if (htmlLoader.visible)
-					{
-						super.location = $value;
-					}
 				}
+				super.location = $value;
 			}
 		}
 		
