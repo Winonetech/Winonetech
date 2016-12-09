@@ -284,6 +284,7 @@ package com.winonetech.controls
 			else
 			{
 				horizontalScrollPosition += plsX * .3;
+				
 				verticalScrollPosition   += plsY * .3;
 			}
 		}
@@ -406,6 +407,24 @@ package com.winonetech.controls
 		override public function get maxVerticalScrollPosition():Number
 		{
 			return wt::maxScrollV;
+		}
+		
+		
+		/**
+		 * @inheritDoc
+		 * 
+		 * 重写以修正当改变horizontalScrollPosition时，页面不横向移动的问题。
+		 * 
+		 */
+		
+		override public function set horizontalScrollPosition(value:Number):void
+		{
+			super.horizontalScrollPosition = value;
+			
+			if (htmlLoader)
+				htmlLoader.scrollH = value;
+			else
+				invalidateProperties();
 		}
 		
 		
