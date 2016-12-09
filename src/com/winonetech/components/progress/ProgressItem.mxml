@@ -27,6 +27,7 @@
 			
 			/**
 			 * @private
+			 * 在set Data的时候被调用。
 			 */
 			private function resolveData():void
 			{
@@ -71,6 +72,7 @@
 			
 			/**
 			 * @private
+			 * 在确定dataProvider时被调用。
 			 */
 			override public function set data($value:Object):void
 			{

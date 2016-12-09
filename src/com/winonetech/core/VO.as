@@ -72,11 +72,12 @@ package com.winonetech.core
 		/**
 		 * 
 		 * 解析转换数据。
+		 * 将所有的数据均转化为Object类型。
 		 * 
 		 */
-		
 		public function parse($data:Object):void
 		{
+			//将数据保存至data和 raw
 			if ($data)
 			{
 				wt::raw = $data;
@@ -84,12 +85,12 @@ package com.winonetech.core
 				{
 					var src:String = StringUtil.trim(String($data));
 					data = XMLUtil.validate(src)
-						?  XMLUtil.convert(XML(src), Object)
+						?  ObjectUtil.convert(XML(src), Object)
 						:  JSON.parse(src);
 				}
 				else if ($data is XML)
 				{
-					data = XMLUtil.convert($data, Object);
+					data = ObjectUtil.convert($data, Object);
 				}
 				else
 				{
@@ -117,7 +118,7 @@ package com.winonetech.core
 		
 		public function toXML():String
 		{
-			return XMLUtil.convert(data, XML, name);
+			return ObjectUtil.convert(data, XML, name);
 		}
 		
 		
@@ -139,7 +140,7 @@ package com.winonetech.core
 		 */
 		private function initialize($data:Object, $name:String):void
 		{
-			name = $name;
+			name = $name;   //用作 XML的根节点。
 			stor = Store.instance;
 			disc = {}, rela = {};
 			cach = new Map;
@@ -248,7 +249,7 @@ package com.winonetech.core
 					{
 						var cache:Cache = Cache($e.command);
 						cache.removeEventListener(CommandEvent.COMMAND_END, handler);
-						
+							
 						delete cach[cache.saveURL];
 						if (ready) dispatchEvent(new ControlEvent(ControlEvent.READY));
 					};
@@ -257,7 +258,7 @@ package com.winonetech.core
 				}
 			}
 			
-			if (cach.length) dispatchEvent(new ControlEvent(ControlEvent.DOWNLOAD));
+			if (cach.length) dispatchEvent(new ControlEvent(ControlEvent.DOWNLOAD));  //当有需要下载的文件时，发送下载命令。
 		}
 		
 		
@@ -394,7 +395,8 @@ package com.winonetech.core
 		public function get ready():Boolean
 		{
 			var result:Boolean = true;
-			if (children)
+			//如果没有子项，则直接设计为已准备阶段。
+			if (children)     
 			{
 				for each (var child:VO in children)
 				{
@@ -438,7 +440,9 @@ package com.winonetech.core
 		
 		/**
 		 * 
-		 * 文件缓存字典。
+		 * (需要下载的)文件缓存字典。
+		 * cach[saveURL] -> cache
+		 * 
 		 * 
 		 */
 		

@@ -312,7 +312,7 @@ package com.winonetech.tools
 						if (t1[2]) var t2:Array = t1[2].split("@");
 						if (t1[2] && t2.length == 2)
 						{
-							//分解如ftp:FTPMedia@192.168.1.21:21的字符串。
+							//分解如 ftp:FTPMedia@192.168.1.21:21的字符串。
 							var t3:Array = t2[0].split(":");
 							var t4:Array = t2[1].split(":");
 							h = t4[0];
@@ -325,6 +325,8 @@ package com.winonetech.tools
 				}
 				
 				loader = new (b ? HTTPLoader : FTPLoader);
+				
+				
 				
 				loader.timeout = timeout;
 				loader.addEventListener(Event.COMPLETE, handlerDefault);
@@ -619,6 +621,18 @@ package com.winonetech.tools
 		public static function get caches():Map
 		{
 			return CACH;
+		}
+		
+		
+		/**
+		 * 
+		 * 获取队列闲置命令的长度。
+		 * 
+		 */
+		
+		public static function get cachesLave():uint
+		{
+			return parallel.lave;
 		}
 		
 		

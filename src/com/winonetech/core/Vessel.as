@@ -11,6 +11,8 @@ package com.winonetech.core
 	import cn.vision.system.Callback;
 	import cn.vision.utils.ArrayUtil;
 	
+	import flash.net.dns.AAAARecord;
+	
 	import mx.events.FlexEvent;
 	
 	import spark.components.Group;
@@ -115,7 +117,7 @@ package com.winonetech.core
 		protected function applyCallback($callback:Function, $priority:Boolean = true, ...$args):void
 		{
 			const l:uint = $args ? $args.length : 0;
-			const callback:Callback = new Callback($callback, $args);
+			const callback:Callback = new Callback($callback, $args);   //相当于把回调方法对象化。
 			const different:Function = function($item:Callback, $index:int = 0, $array:Array = null):Boolean
 			{
 				var r:Boolean =($item.callback != callback.callback), i:uint;
@@ -131,7 +133,7 @@ package com.winonetech.core
 				return r;
 			};
 			
-			if (callback.call())
+			if (callback.call())   //此处判定被回调的返回值。
 			{
 				if (callbacks.length)
 				{
