@@ -112,18 +112,6 @@ package com.winonetech.tools
 		
 		/**
 		 * 
-		 * 停止下载队列。
-		 * 
-		 */
-		
-		public static function close():void
-		{
-			queue.close();
-		}
-		
-		
-		/**
-		 * 
 		 * 检测本地缓存文件是否存在，如果传递的url为空，则默认返回true。
 		 * 
 		 * @param $url:String 文件相对路径。
@@ -374,8 +362,10 @@ package com.winonetech.tools
 				loader.removeEventListener(IOErrorEvent.IO_ERROR, handlerDefault);
 				loader.removeEventListener(ProgressEvent.PROGRESS, handlerProgress);
 				loader.removeEventListener(SecurityErrorEvent.SECURITY_ERROR, handlerDefault);
-				if (loader is FTPLoader)  code = loader.code;
-				loader.close();
+				if (loader is FTPLoader) 
+				{
+					code = loader.code;
+				}
 				loader = null;
 			}
 			
