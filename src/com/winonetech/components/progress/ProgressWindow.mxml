@@ -3,29 +3,27 @@
 				   xmlns:s ="library://ns.adobe.com/flex/spark"
 				   xmlns:mx="library://ns.adobe.com/flex/mx"
 				   xmlns:pr="com.winonetech.components.progress.*"
-				   mouseChildren="false" mouseEnabled="false"
-				   width="250" cornerRadius="5">
+				   width="280" cornerRadius="5">
 	
 	<s:layout>
-		<s:VerticalLayout paddingLeft="10" paddingRight="10"
-						  paddingBottom="10" paddingTop="10"
-						  horizontalAlign="center"/>
+		<s:VerticalLayout verticalAlign="middle" horizontalAlign="center"/>
 	</s:layout>
 	
 	<s:states>
-		<s:State name="loading"/>
-		<s:State name="finish"/>
+		<s:State name="simple"/>
+		<s:State name="concrete"/>
 	</s:states>
 	
-	<s:Label width="100%"
+	<s:Label id="stateLabel"
+			 width="100%"
 			 color="0"
-			 maxDisplayedLines="1"
+			 maxDisplayedLines="0"
 			 fontSize="20"
-			 text="{title}"
-			 textAlign="center"/>
+			 textAlign="center"
+			 click="stateLabel_clickHandler(event)"/>
 	
 	<s:List width="100%" height="100%" enabled="false"
-			dataProvider="{list}" includeIn="loading"
+			dataProvider="{list}" includeIn="concrete"
 			skinClass="com.winonetech.skins.DisabledListSkin">
 		<s:itemRenderer>
 			<fx:Component>
@@ -34,20 +32,10 @@
 		</s:itemRenderer>
 	</s:List>
 	
-	<s:Label includeIn="finish" color="0" text="{message}" width="100%"/>
-	
-	<mx:ProgressBar width="100%" includeIn="finish"
-					label="" id="bar" indeterminate="true"
-					trackSkin="com.winonetech.skins.ProgressBarTrackSkin"
-					barSkin="com.winonetech.skins.ProgressBarScrubSkin"/>
-	
 	<fx:Script>
 		<![CDATA[
 			import cn.vision.collections.Map;
-			import cn.vision.consts.FileTypeConsts;
 			import cn.vision.events.pattern.CommandEvent;
-			import cn.vision.utils.FileUtil;
-			import cn.vision.utils.LogUtil;
 			
 			import com.winonetech.core.wt;
 			import com.winonetech.tools.Cache;
@@ -92,6 +80,7 @@
 			 */
 			protected function processPlay():void
 			{
+				Cache.start();				
 				list.removeAll();
 				pushCaches();
 			}
@@ -108,52 +97,52 @@
 			/**
 			 * @private
 			 */
+			
 			private function pushCaches():void
 			{
-				if (data)
+				if (data)    
 				{
-					if (data.length > 0)
+					if (data.length > 0)   //大于 0表示有需要下载的内容。
 					{
-						title = "剩余下载 " + data.length + ", 请稍后...";
+//						title = "剩余下载 " + data.length + ", 请稍后...";
 						if (playing)
 						{
-							var keys:Array = [];
-							for (var key:String in data) keys.push(key);
+							var keys:Array = [];   // keys内部存的是 cache的 saveURL
+							for (var key:String in data) keys.push(key);  
 							var l:int = keys.length;
 							
-							for (var i:int = 0; i < l; i++)
+							for (var i:int = 0; i < l; i++)    //遍历 saveURL
 							{
 								key = keys[i];
-								if (list.length < 3)
+								if (list.length < 3)   //最多显示 3个
 								{
 									var cache:Cache = data[key];
 									
-									var ext:String = FileUtil.getFileTypeByURL(cache.saveURL);
-									if (ext != FileTypeConsts.MP4 && ext != FileTypeConsts.FLV)
-									{
-										//如果不是视频
-										LogUtil.log("优先缓存：" + cache.saveURL + " 剩余：" + data.length);
-										
-										Cache.shift(cache);
-									}
-									else
-									{
-										//是视频，且队列后面仍有图片
-										if (checkHasImage(keys, i)) continue;
-									}
+//									var ext:String = FileUtil.getFileTypeByURL(cache.saveURL);
+//									if (ext != FileTypeConsts.MP4 && ext != FileTypeConsts.FLV)
+//									{
+//										//如果不是视频
+//										LogUtil.log("优先缓存：" + cache.saveURL + " 剩余：" + data.length);
+//										
+//										Cache.shift(cache);    //优先下载队列。
+//									}
+//									else
+//									{
+//										//是视频，且队列后面仍有图片
+//										if (checkHasImage(keys, i)) continue;
+//									}
 									cache.addEventListener(CommandEvent.COMMAND_END, handlerCacheEnd);
-									if (list.getItemIndex(cache) == -1) list.addItem(cache);
-								} else break;
-							}
-							Cache.start();
-						}
-					}
-					else
-					{
-						title = "请稍后...";
-						currentState = "finish";
-					}
-				}
+									if (list.getItemIndex(cache) == -1) list.addItem(cache);  //不存在则加入。
+								} else break;   //大于 3个则跳出循环。
+							} // for循环
+						} // if(playing)
+					} // if(data.length > 0)
+//					else
+//					{
+//						title = "请稍后...";
+//						currentState = "finish";
+//					}
+				} // if(data)
 			}
 			
 			
@@ -174,22 +163,22 @@
 			}
 			
 			
-			/**
-			 * @private
-			 */
-			private static function checkHasImage($array:Array, $flag:uint):Boolean
-			{
-				if ($array)
-				{
-					var l:uint = $array.length;
-					for (var i:uint = $flag; i < l; i++)
-					{
-						var ext:String = FileUtil.getFileTypeByURL($array[i]);
-						if (ext != FileTypeConsts.MP4 && ext != FileTypeConsts.FLV) return true;
-					}
-				}
-				return false;
-			}
+//			/**
+//			 * @private
+//			 */
+//			private static function checkHasImage($array:Array, $flag:uint):Boolean
+//			{
+//				if ($array)
+//				{
+//					var l:uint = $array.length;
+//					for (var i:uint = $flag; i < l; i++)
+//					{
+//						var ext:String = FileUtil.getFileTypeByURL($array[i]);
+//						if (ext != FileTypeConsts.MP4 && ext != FileTypeConsts.FLV) return true;
+//					}
+//				}
+//				return false;
+//			}
 			
 			
 			/**
@@ -197,21 +186,21 @@
 			 * 需要演示的进度下载的Cache集合。
 			 * 
 			 */
-			[Bindable]
+			
 			public function get data():Map
 			{
-				return wt::data;
+				return Cache.executingCaches;
 			}
 			
-			/**
-			 * @private
-			 */
-			public function set data($value:Map):void
-			{
-				wt::data = $value;
-				
-				playing && processPlay();
-			}
+//			/**
+//			 * @private
+//			 */
+//			public function set data($value:Map):void
+//			{
+//				wt::data = $value;
+//				
+//				playing && processPlay();
+//			}
 			
 			
 			/**
@@ -256,6 +245,14 @@
 			 * @private
 			 */
 			wt var data:Map;
+			
+			public var isDownloading:Boolean;
+			
+			protected function stateLabel_clickHandler(event:MouseEvent):void
+			{
+				if (isDownloading)
+					currentState = currentState != "simple" ? "simple" : "concrete";
+			}
 			
 		]]>
 	</fx:Script>
