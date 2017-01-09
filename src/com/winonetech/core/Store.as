@@ -74,7 +74,9 @@ package com.winonetech.core
 		 * 解析并注册成VO类型的数据。<br>
 		 * 如果是列表行数据，则会对列表进行遍历，列表行数据包括Vector，Array，XMLList，Map；<br>
 		 * 如果是XML或Object数据，会构建一个$type类型的VO数据；<br>
-		 * 如果本身是一个VO，会直接存储。
+		 * 如果本身是一个VO，会直接存储。<br>
+		 * 执行此方法后会注册cla和map字典。<br>
+		 * 特别地，cla[ClassName] -> Class对象；map[ClassName][$value[$key]] -> $value的$type类型实例。
 		 * 
 		 * @param $value:* 注册的数据。
 		 * @param $type:Class (default = null) 数据类型，如果为空，则以$value实例的类型为准。
@@ -254,12 +256,12 @@ package com.winonetech.core
 		private var raw:Object;
 		
 		/**
-		 * @private
+		 * cla[ClassName] -> Class对象
 		 */
 		private var cla:Object;
 		
 		/**
-		 * @private
+		 * map[ClassName][$value[$key]] -> $value的$type类型实例。
 		 */
 		private var map:Object;
 		

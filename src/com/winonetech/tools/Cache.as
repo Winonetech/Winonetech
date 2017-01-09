@@ -32,6 +32,7 @@ package com.winonetech.tools
 	import flash.events.ProgressEvent;
 	import flash.events.SecurityErrorEvent;
 	import flash.events.TimerEvent;
+	import flash.filesystem.File;
 	import flash.utils.ByteArray;
 	import flash.utils.Timer;
 	
@@ -53,12 +54,13 @@ package com.winonetech.tools
 		 * 缓存文件至本地。
 		 * 
 		 * @param $url:String 加载地址。
+		 * @param $useSP:Boolean 是否加入到特殊队列。
 		 * 
 		 * @return Cache Cache实例。
 		 * 
 		 */
 		
-		public static function cache($url:String):Cache
+		public static function cache($url:String, $useSP:Boolean = false):Cache
 		{
 			if(!StringUtil.isEmpty($url))
 			{
@@ -67,7 +69,8 @@ package com.winonetech.tools
 				
 				var cache:Cache = (CACH[saveURL] = CACH[saveURL] || new Cache(loadURL, saveURL));
 				//cahe文件不存在，cache没有执行，cache不在队列中
-				if((!cache.exist) && (!cache.executing) && queue.indexOf(cache) == -1)
+				if((!cache.exist) && (!cache.executing) &&
+					(queue.indexOf(cache) == -1 || queue_sp.indexOf(cache) == -1))
 				{
 					switch(FileUtil.getFileTypeByURL(saveURL).toLowerCase())
 					{
@@ -82,8 +85,15 @@ package com.winonetech.tools
 							break;
 					}
 					
-					queue.execute(cache);
-					total ++;
+					if ($useSP)
+					{
+						queue_sp.execute(cache) 
+					}
+					else
+					{
+						queue.execute(cache);
+						total ++;
+					}
 				}
 			}
 			return CACH[saveURL];
@@ -98,7 +108,10 @@ package com.winonetech.tools
 		
 		public static function start():void
 		{
-			if(!queue.executing) queue.execute();
+			if (!queue.executing)
+			{
+				if (queue.lave + queue.num > 0) queue.execute();
+			}
 			else
 			{
 				LogUtil.log("正在下载的文件个数：", queue.executingCommands.length);
@@ -106,6 +119,18 @@ package com.winonetech.tools
 				{
 					LogUtil.log("文件：" + item.saveURL + "，" + item.speed + "，" + item.percent);
 				}
+			}
+			
+			if (!queue_sp.executing)
+			{
+				if (queue_sp.lave + queue_sp.num > 0) 
+					queue_sp.execute();
+				else
+					LogUtil.log("暂无特殊队列下载。");
+			}
+			else
+			{
+				LogUtil.log("特殊文件正在下载...");
 			}
 		}
 		
@@ -127,6 +152,21 @@ package com.winonetech.tools
 			return file ? file.exists : true;
 		}
 		
+		/**
+		 * 
+		 * 只删除zip格式的文件。
+		 * @param $url:String 文件相对路径。
+		 * 
+		 */
+		
+		public static function removeZip($url:String):void
+		{
+			if (!StringUtil.isEmpty($url))
+			{
+				var file:File = new File(File.applicationDirectory.resolvePath($url).nativePath);
+				if (file.exists && file.type == ".zip") file.deleteFile();
+			}
+		}
 		
 		/**
 		 * 
@@ -289,8 +329,8 @@ package com.winonetech.tools
 		{
 			if(!exist)
 			{
-				var protocol:String = String(loadURL.split("://")[0]).toLowerCase();
-				var b:Boolean = protocol == ProtocolConsts.HTTP;
+				var protocol:String = String(loadURL.split("://")[0]).toLowerCase();    //确定协议 （ FTP || HTTP）。
+				var b:Boolean = protocol == ProtocolConsts.HTTP;     //是否是HTTP协议。
 				var l:String = b ? loadURL : CacheUtil.extractURI(loadURL);
 				var s:String = FileUtil.resolvePathApplication(saveURL);
 				if (b)
@@ -402,7 +442,7 @@ package com.winonetech.tools
 			{
 				if (cache.reloadCount++ < 3)
 				{
-					if (cache.code == "530")
+					if (cache.code == "550")
 					{
 						LogUtil.log("下载失败：" + cache.code + "，" + cache.saveURL + "，" + cache.message);
 						cache.reloadCount = 0;
@@ -427,9 +467,54 @@ package com.winonetech.tools
 				{
 					success++;
 					LogUtil.log("下载成功" + cache.saveURL + "总数：" + total + "剩余：" + (queue.lave + queue.num));
+					Cache.removeZip(cache.saveURL);    //删除资源zip。
 				}
 			}
 		}
+		
+		
+		
+		/**
+		 * @private
+		 */
+		private static function parallel_spStepEnd($e:QueueEvent):void
+		{
+			var cache:Cache = $e.command as Cache;
+			if(!cache.exist)
+			{
+				if (cache.reloadCount++ < 3)
+				{
+					if (cache.code == "550")
+					{
+						LogUtil.log("特殊文件下载失败：" + cache.code + "，" + cache.saveURL + "，" + cache.message);
+						cache.reloadCount = 0;
+					}
+					else
+					{
+						LogUtil.log("特殊文件下载失败：" + cache.code + "，" + cache.saveURL + "，稍后再次下载，" + cache.message);
+						cache.priority = CommandPriorityConsts.NORMAL;
+						queue_sp.execute(cache);
+					}
+				}
+				else
+				{
+					result = false;
+					FAIL_SP[cache.saveURL] = cache;
+					LogUtil.log("特殊文件下载失败：" + cache.code + "，" + cache.saveURL + "，网络较慢，FTP服务器无响应。");
+				}
+			}
+			else
+			{
+				if (cache.succeed)
+				{
+					result = true;
+					LogUtil.log("特殊文件下载成功");
+					Cache.removeZip(cache.saveURL);    //删除资源zip。
+				}
+			}
+		}
+		
+		
 		
 		/**
 		 * @private
@@ -439,6 +524,28 @@ package com.winonetech.tools
 			var cache:Cache = $e.command as Cache;
 			LogUtil.log((cache.reloadCount == 0 ? "开始下载" : "再次下载"), cache.saveURL);
 		}
+
+		
+		/**
+		 * @private
+		 */
+		private static function parallel_spStepStart($e:QueueEvent):void
+		{
+			var cache:Cache = $e.command as Cache;
+			LogUtil.log((cache.reloadCount == 0 ? "特殊队列开始下载" : "特殊队列再次下载"), cache.saveURL);
+		}
+		
+		/**
+		 * @private
+		 */
+		private static function parallel_spQueueEnd($e:QueueEvent):void
+		{
+			LogUtil.log("特殊队列下载结束");
+			LogUtil.log(result ? "特殊队列下载成功" : "特殊队列下载失败");
+			
+			reloadLater(true);
+		}
+		
 		
 		/**
 		 * @private
@@ -465,7 +572,15 @@ package com.winonetech.tools
 		/**
 		 * @private
 		 */
-		private static function reloadLater():void
+		private static function parallel_spQueueStart($e:QueueEvent):void
+		{
+			LogUtil.log("特殊队列下载开始");
+		}
+		
+		/**
+		 * @private
+		 */
+		private static function reloadLater($sp:Boolean = false):void
 		{
 			if (FAIL.length) 
 			{
@@ -476,7 +591,7 @@ package com.winonetech.tools
 					timer.stop();
 					timer = null;
 					
-					reloadFailures();
+					$sp ? reloadSP() : reloadFailures();
 				};
 				timer.addEventListener(TimerEvent.TIMER_COMPLETE, handler);
 				timer.start();
@@ -489,8 +604,20 @@ package com.winonetech.tools
 		private static function reloadFailures():void
 		{
 			for each (var item:Cache in FAIL) queue.execute(item);
+			
+			queue.execute();
 		}
 		
+		
+		/**
+		 * @private
+		 */
+		private static function reloadSP():void
+		{
+			for each (var item:Cache in FAIL_SP) queue_sp.execute(item);
+			
+			queue_sp.execute();
+		}
 		
 		/**
 		 * 
@@ -600,6 +727,23 @@ package com.winonetech.tools
 		}
 		
 		
+		public static function get queue_sp():ParallelQueue
+		{
+			if (!parallel_sp)
+			{
+				parallel_sp = new ParallelQueue;
+				parallel_sp.addEventListener(QueueEvent.STEP_START, parallel_spStepStart);
+				parallel_sp.addEventListener(QueueEvent.STEP_END, parallel_spStepEnd, false, uint.MAX_VALUE);
+				parallel_sp.addEventListener(QueueEvent.QUEUE_START, parallel_spQueueStart);
+				parallel_sp.addEventListener(QueueEvent.QUEUE_END, parallel_spQueueEnd);
+				parallel_sp.immediateExecute = false;
+				parallel_sp.limit = 1;
+			}
+			return parallel_sp;
+		}
+		
+		
+		
 		/**
 		 * 
 		 * 返回正在当前正在下载的缓存集合。
@@ -634,6 +778,13 @@ package com.winonetech.tools
 		{
 			return parallel.lave;
 		}
+		
+		
+		public static function get hasSP():Boolean
+		{
+			return parallel_sp.lave > 0;
+		}
+		
 		
 		
 		/**
@@ -703,6 +854,13 @@ package com.winonetech.tools
 		 */
 		private static var parallel:ParallelQueue;
 		
+		
+		/**
+		 * @private
+		 */
+		private static var parallel_sp:ParallelQueue;
+		
+		
 		/**
 		 * @private
 		 */
@@ -713,11 +871,17 @@ package com.winonetech.tools
 		 */
 		private static var success:uint = 0;
 		
+		
+		
 		/**
 		 * @private
 		 */
 		private static var failure:uint = 0;
 		
+		/**
+		 * @private
+		 */
+		private static var result:Boolean = true;
 		
 		/**
 		 * @private
@@ -738,6 +902,11 @@ package com.winonetech.tools
 		 * @private
 		 */
 		private static const FAIL:Map = new Map;
+		
+		/**
+		 * @private
+		 */
+		private static const FAIL_SP:Map = new Map;
 		
 	}
 }
