@@ -24,5 +24,15 @@ package com.winonetech.consts
 		
 		public static const PATH_FILE:String = "cache";
 		
+		/**
+		 * 
+		 * 存储服务端文件是否存在的缓存列表。
+		 * 
+		 * @default cache/fileList.lst
+		 * 
+		 */
+		
+		public static const PATH_FILE_LIST_CACHE:String = "cache/fileList.lst";
+		
 	}
 }

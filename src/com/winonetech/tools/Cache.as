@@ -33,6 +33,8 @@ package com.winonetech.tools
 	import flash.events.SecurityErrorEvent;
 	import flash.events.TimerEvent;
 	import flash.filesystem.File;
+	import flash.filesystem.FileMode;
+	import flash.filesystem.FileStream;
 	import flash.utils.ByteArray;
 	import flash.utils.Timer;
 	
@@ -85,7 +87,7 @@ package com.winonetech.tools
 							break;
 					}
 					
-					if ($useSP)
+					if ($useSP || checkFileUnloadable(loadURL))
 					{
 						queue_sp.execute(cache) 
 					}
@@ -365,9 +367,6 @@ package com.winonetech.tools
 				}
 				
 				loader = new (b ? HTTPLoader : FTPLoader);
-				
-				
-				
 				loader.timeout = timeout;
 				loader.addEventListener(Event.COMPLETE, handlerDefault);
 				loader.addEventListener(IOErrorEvent.IO_ERROR, handlerDefault);
@@ -388,6 +387,62 @@ package com.winonetech.tools
 		{
 			loadURL = $loadURL;
 			saveURL = $saveURL;
+		}
+		
+		
+		/**
+		 * @private
+		 */
+		private static function checkFileUnloadable($url:String):Boolean
+		{
+			var cacheObj:Object = getFileCache();
+			return cacheObj && cacheObj[$url];
+		}
+		
+		/**
+		 * @private
+		 */
+		private static function flagFileUnloadable($url:String):void
+		{
+			var cacheObj:Object = getFileCache() || {};
+			cacheObj[$url] = true;
+			setFileCache(cacheObj);
+		}
+		
+		/**
+		 * @private
+		 */
+		private static function getFileCache():Object
+		{
+			cacheListFile = cacheListFile || new VSFile(FileUtil.resolvePathApplication(PathConsts.PATH_FILE_LIST_CACHE));
+			if (cacheListFile.exists)
+			{
+				cacheListStream.open(cacheListFile, FileMode.READ);
+				var temp:String = cacheListStream.readUTFBytes(cacheListStream.bytesAvailable);
+				cacheListStream.close();
+			}
+			try
+			{
+				if (temp) var result:Object = JSON.parse(temp);
+			} catch(e:Error){}
+			return result;
+		}
+		
+		/**
+		 * @private
+		 */
+		private static function setFileCache($value:Object):void
+		{
+			try
+			{
+				var temp:String = JSON.stringify($value);
+			} catch(e:Error) {}
+			if (temp)
+			{
+				cacheListStream.open(cacheListFile, FileMode.WRITE);
+				cacheListStream.writeUTFBytes(temp);
+				cacheListStream.close();
+			}
 		}
 		
 		
@@ -446,6 +501,9 @@ package com.winonetech.tools
 					{
 						LogUtil.log("下载失败：" + cache.code + "，" + cache.saveURL + "，" + cache.message);
 						cache.reloadCount = 0;
+						//标记该文件下载失败，原因是服务端没有这个文件。
+						flagFileUnloadable(cache.loadURL);
+						
 					}
 					else
 					{
@@ -456,9 +514,11 @@ package com.winonetech.tools
 				}
 				else
 				{
+					LogUtil.log("下载失败：" + cache.code + "，" + cache.saveURL + "，网络较慢，FTP服务器无响应。");
 					failure++;
 					FAIL[cache.saveURL] = cache;
-					LogUtil.log("下载失败：" + cache.code + "，" + cache.saveURL + "，网络较慢，FTP服务器无响应。");
+					//标记下载失败，可能原因是服务端阻塞。
+					flagFileUnloadable(cache.loadURL);
 				}
 			}
 			else
@@ -907,6 +967,16 @@ package com.winonetech.tools
 		 * @private
 		 */
 		private static const FAIL_SP:Map = new Map;
+		
+		/**
+		 * @private
+		 */
+		private static var cacheListFile:VSFile;
+		
+		/**
+		 * @private
+		 */
+		private static var cacheListStream:FileStream = new FileStream;
 		
 	}
 }
