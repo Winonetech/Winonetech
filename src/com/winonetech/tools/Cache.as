@@ -110,6 +110,8 @@ package com.winonetech.tools
 		
 		public static function start():void
 		{
+			if (!allowed) return;
+			
 			if (!queue.executing)
 			{
 				if (queue.lave + queue.num > 0) queue.execute();
@@ -134,6 +136,8 @@ package com.winonetech.tools
 			{
 				LogUtil.log("特殊文件正在下载...");
 			}
+			
+			allowed = false;
 		}
 		
 		
@@ -464,17 +468,20 @@ package com.winonetech.tools
 				loader = null;
 			}
 			
-			switch ($e.type)
+			if ($e)
 			{
-				case Event.COMPLETE:
-					wt::succeed = true;
-					break;
-				case IOErrorEvent.IO_ERROR:
-				case SecurityErrorEvent.SECURITY_ERROR:
-					wt::message = Object($e).text;
-					break;
+				switch ($e.type)
+				{
+					case Event.COMPLETE:
+						wt::succeed = true;
+						break;
+					case IOErrorEvent.IO_ERROR:
+					case SecurityErrorEvent.SECURITY_ERROR:
+						wt::message = Object($e).text;
+						break;
+				}
 			}
-			
+		
 			commandEnd();
 		}
 		
@@ -495,7 +502,7 @@ package com.winonetech.tools
 			var cache:Cache = $e.command as Cache;
 			if(!cache.exist)
 			{
-				if (cache.reloadCount++ < 3)
+				if (cache.reloadCount++ < 2)
 				{
 					if (cache.code == "550")
 					{
@@ -542,7 +549,7 @@ package com.winonetech.tools
 			var cache:Cache = $e.command as Cache;
 			if(!cache.exist)
 			{
-				if (cache.reloadCount++ < 3)
+				if (cache.reloadCount++ < 2)
 				{
 					if (cache.code == "550")
 					{
@@ -842,7 +849,7 @@ package com.winonetech.tools
 		
 		public static function get hasSP():Boolean
 		{
-			return parallel_sp.lave > 0;
+			return queue_sp.lave > 0;
 		}
 		
 		
@@ -907,6 +914,16 @@ package com.winonetech.tools
 		 */
 		
 		public static var timeout:uint = 10;
+		
+		
+		/**
+		 * 
+		 * 是否允许执行下载。<br>
+		 * 当需要下载的时候，在调用处之前改其为true。
+		 * 
+		 */
+		
+		public static var allowed:Boolean;
 		
 		
 		/**

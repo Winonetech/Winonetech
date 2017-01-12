@@ -144,6 +144,7 @@ package com.winonetech.core
 			stor = Store.instance;
 			disc = {}, rela = {};
 			cach = new Map;
+			cach_sp = new Map;
 			parse($data);
 		}
 		
@@ -230,6 +231,10 @@ package com.winonetech.core
 		}
 		
 		
+		
+//		protected function destroy():void {}
+		
+		
 		/**
 		 * 
 		 * 注册需要缓存的文件地址。
@@ -258,7 +263,7 @@ package com.winonetech.core
 				}
 			}
 			
-			if (cach.length) dispatchEvent(new ControlEvent(ControlEvent.DOWNLOAD));  //当有需要下载的文件时，发送下载命令。
+//			if (cach.length) dispatchEvent(new ControlEvent(ControlEvent.DOWNLOAD));  //当有需要下载的文件时，发送下载命令。
 		}
 		
 		
@@ -407,7 +412,8 @@ package com.winonetech.core
 					}
 				}
 			}
-			return result && (!cach.length);
+			return true;
+//			return result && (!cach.length);
 		}
 		
 		
@@ -448,6 +454,7 @@ package com.winonetech.core
 		
 		protected var cach:Map;
 		
+		protected var cach_sp:Map;
 		
 		/**
 		 * 
@@ -484,6 +491,8 @@ package com.winonetech.core
 		 * @private
 		 */
 		wt var raw:*;
+		
+		
 		
 	}
 }

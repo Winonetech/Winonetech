@@ -80,6 +80,7 @@
 			 */
 			protected function processPlay():void
 			{
+				Cache.allowed = true;
 				Cache.start();				
 				list.removeAll();
 				pushCaches();
