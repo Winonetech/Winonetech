@@ -18,7 +18,9 @@ package com.winonetech.controls
 	import flash.events.Event;
 	import flash.events.MouseEvent;
 	import flash.geom.Point;
+	import flash.utils.getQualifiedClassName;
 	
+	import spark.components.Group;
 	import spark.components.Scroller;
 	
 	
@@ -41,7 +43,10 @@ package com.winonetech.controls
 			addEventListener(MouseEvent.MOUSE_DOWN, scroller_mouseDownHandler);
 		}
 		
-		
+		private function ass(e:MouseEvent):void
+		{
+			trace(getQualifiedClassName(e.target));		
+		}
 		/**
 		 * 
 		 * 停止滚动的缓动操作。
@@ -81,7 +86,7 @@ package com.winonetech.controls
 		 */
 		private function scroller_mouseDownHandler(e:MouseEvent):void
 		{
-			if (viewport)
+			if (viewport && e.target is Group)
 			{
 				if (maxHorizontalScrollPosition || 
 					maxVerticalScrollPosition)
@@ -89,7 +94,7 @@ package com.winonetech.controls
 					down = new Point(mouseX, mouseY);
 					scro = new Point(
 						viewport.horizontalScrollPosition, 
-						viewport.verticalScrollPosition);
+						viewport.verticalScrollPosition);    //视觉区域对于原点的坐标。
 					stag = stage;
 					stag.addEventListener(MouseEvent.MOUSE_MOVE, scroller_mouseMoveHandler);
 					stag.addEventListener(MouseEvent.MOUSE_UP, scroller_mouseUpHandler);

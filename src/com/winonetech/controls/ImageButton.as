@@ -50,7 +50,7 @@ package com.winonetech.controls
 		private function handlerMouseDown($e:MouseEvent):void
 		{
 			ColorUtil.highlight(this, .1);
-			stage.addEventListener(MouseEvent.MOUSE_UP, handlerMouseUp);
+			stage.addEventListener(MouseEvent.MOUSE_UP, handlerMouseUp, false, 0, true);
 		}
 		
 		/**
@@ -59,6 +59,7 @@ package com.winonetech.controls
 		private function handlerMouseUp($e:MouseEvent):void
 		{
 			ColorUtil.normalize(this);
+			if (stage)
 			stage.removeEventListener(MouseEvent.MOUSE_UP, handlerMouseUp);
 		}
 		

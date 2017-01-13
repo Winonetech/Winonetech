@@ -160,17 +160,17 @@ package com.winonetech.tools
 		
 		/**
 		 * 
-		 * 只删除zip格式的文件。
+		 * 删除zip格式的文件。
 		 * @param $url:String 文件相对路径。
 		 * 
 		 */
 		
 		public static function removeZip($url:String):void
 		{
-			if (!StringUtil.isEmpty($url))
+			if (FileUtil.getFileTypeByURL($url) == "zip")
 			{
-				var file:File = new File(File.applicationDirectory.resolvePath($url).nativePath);
-				if (file.exists && file.type == ".zip") file.deleteFile();
+				var file:File = new File(FileUtil.resolvePathApplication($url));
+				if (file.exists) file.deleteFile();
 			}
 		}
 		
