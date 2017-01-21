@@ -3,7 +3,7 @@
 				   xmlns:s ="library://ns.adobe.com/flex/spark"
 				   xmlns:mx="library://ns.adobe.com/flex/mx"
 				   xmlns:pr="com.winonetech.components.progress.*"
-				   width="280" cornerRadius="5">
+				   width="280" cornerRadius="5" top="0" left="0" alpha=".5">
 	
 	<s:layout>
 		<s:VerticalLayout verticalAlign="middle" horizontalAlign="center"/>
@@ -20,6 +20,7 @@
 			 maxDisplayedLines="0"
 			 fontSize="20"
 			 textAlign="center"
+			 text="{message}"
 			 click="stateLabel_clickHandler(event)"/>
 	
 	<s:List width="100%" height="100%" enabled="false"
@@ -71,6 +72,7 @@
 				{
 					playing = false;
 					processStop();
+					
 				}
 			}
 			
@@ -80,18 +82,17 @@
 			 */
 			protected function processPlay():void
 			{
-				Cache.allowed = true;
-				Cache.start();				
-				list.removeAll();
+				message = "有新的排期，正在下载素材...";
+				if (list) list.removeAll();
 				pushCaches();
 			}
 			
 			/**
 			 * @private
 			 */
-			protected function processStop():void
+			protected function processStop():void 
 			{
-				
+				message = null;
 			}
 			
 			
@@ -105,7 +106,6 @@
 				{
 					if (data.length > 0)   //大于 0表示有需要下载的内容。
 					{
-//						title = "剩余下载 " + data.length + ", 请稍后...";
 						if (playing)
 						{
 							var keys:Array = [];   // keys内部存的是 cache的 saveURL
@@ -118,31 +118,13 @@
 								if (list.length < 3)   //最多显示 3个
 								{
 									var cache:Cache = data[key];
-									
-//									var ext:String = FileUtil.getFileTypeByURL(cache.saveURL);
-//									if (ext != FileTypeConsts.MP4 && ext != FileTypeConsts.FLV)
-//									{
-//										//如果不是视频
-//										LogUtil.log("优先缓存：" + cache.saveURL + " 剩余：" + data.length);
-//										
-//										Cache.shift(cache);    //优先下载队列。
-//									}
-//									else
-//									{
-//										//是视频，且队列后面仍有图片
-//										if (checkHasImage(keys, i)) continue;
-//									}
+
 									cache.addEventListener(CommandEvent.COMMAND_END, handlerCacheEnd);
 									if (list.getItemIndex(cache) == -1) list.addItem(cache);  //不存在则加入。
 								} else break;   //大于 3个则跳出循环。
 							} // for循环
 						} // if(playing)
 					} // if(data.length > 0)
-//					else
-//					{
-//						title = "请稍后...";
-//						currentState = "finish";
-//					}
 				} // if(data)
 			}
 			
@@ -163,23 +145,14 @@
 				pushCaches();
 			}
 			
-			
-//			/**
-//			 * @private
-//			 */
-//			private static function checkHasImage($array:Array, $flag:uint):Boolean
-//			{
-//				if ($array)
-//				{
-//					var l:uint = $array.length;
-//					for (var i:uint = $flag; i < l; i++)
-//					{
-//						var ext:String = FileUtil.getFileTypeByURL($array[i]);
-//						if (ext != FileTypeConsts.MP4 && ext != FileTypeConsts.FLV) return true;
-//					}
-//				}
-//				return false;
-//			}
+			/**
+			 * @private
+			 */
+			private function stateLabel_clickHandler(event:MouseEvent):void
+			{
+				if (playing)
+					currentState = currentState != "simple" ? "simple" : "concrete";
+			}
 			
 			
 			/**
@@ -247,13 +220,6 @@
 			 */
 			wt var data:Map;
 			
-			public var isDownloading:Boolean;
-			
-			protected function stateLabel_clickHandler(event:MouseEvent):void
-			{
-				if (isDownloading)
-					currentState = currentState != "simple" ? "simple" : "concrete";
-			}
 			
 		]]>
 	</fx:Script>

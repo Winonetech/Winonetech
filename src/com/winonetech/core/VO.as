@@ -12,14 +12,22 @@ package com.winonetech.core
 	import cn.vision.core.VSEventDispatcher;
 	import cn.vision.events.pattern.CommandEvent;
 	import cn.vision.utils.ArrayUtil;
-	import cn.vision.utils.ClassUtil;
 	import cn.vision.utils.ObjectUtil;
 	import cn.vision.utils.StringUtil;
+	import cn.vision.utils.TimerUtil;
 	import cn.vision.utils.XMLUtil;
 	
 	import com.winonetech.events.ControlEvent;
 	import com.winonetech.tools.Cache;
-	import com.winonetech.utils.ConvertUtil;
+	
+	
+	/**
+	 * 
+	 * VO初始化完毕时触发。
+	 * 
+	 */
+	
+	[Event(name="init", type="com.winonetech.events.ControlEvent")]
 	
 	
 	/**
@@ -61,11 +69,11 @@ package com.winonetech.core
 		 * 
 		 */
 		
-		public function VO($data:Object = null, $name:String = "vo")
+		public function VO($data:Object = null, $name:String = "vo", $useWait:Boolean = true, $cacheGroup:String = null)
 		{
 			super();
 			
-			initialize($data, $name);
+			initialize($data, $name, $useWait, $cacheGroup);
 		}
 		
 		
@@ -98,6 +106,9 @@ package com.winonetech.core
 				}
 			}
 			else data = {};
+			
+			TimerUtil.callLater(1, dispatchInit);
+			TimerUtil.callLater(2, dispatchReady);
 		}
 		
 		
@@ -138,13 +149,15 @@ package com.winonetech.core
 		 * 初始化操作。
 		 * @private
 		 */
-		private function initialize($data:Object, $name:String):void
+		private function initialize($data:Object, $name:String, $useWait:Boolean, $cacheGroup:String):void
 		{
 			name = $name;   //用作 XML的根节点。
 			stor = Store.instance;
+			useWait = $useWait;
+			cacheGroup = $cacheGroup;
 			disc = {}, rela = {};
 			cach = new Map;
-			cach_sp = new Map;
+			
 			parse($data);
 		}
 		
@@ -231,6 +244,34 @@ package com.winonetech.core
 		}
 		
 		
+		/**
+		 * 
+		 * 发送初始化完毕。
+		 * 
+		 */
+		
+		protected function dispatchInit():void
+		{
+			if(!inited) 
+			{
+				inited = true;
+				dispatchEvent(new ControlEvent(ControlEvent.INIT));
+			}
+		}
+		
+		
+		/**
+		 * 
+		 * 发送准备完毕。
+		 * 
+		 */
+		
+		protected function dispatchReady():void
+		{
+			if (ready) dispatchEvent(new ControlEvent(ControlEvent.READY));
+		}
+		
+		
 		
 //		protected function destroy():void {}
 		
@@ -247,8 +288,8 @@ package com.winonetech.core
 		{
 			for each (var item:* in $args)
 			{
-				var cache:Cache = (item is String) ? Cache.cache(item) : item;
-				if (cache && ! cach[cache.saveURL] && !cache.exist)
+				var cache:Cache = (item is String) ? Cache.cache(item, !useWait, cacheGroup) : item;
+				if (!useWait && cache && ! cach[cache.saveURL] && !cache.exist)
 				{
 					var handler:Function = function($e:CommandEvent):void
 					{
@@ -256,14 +297,15 @@ package com.winonetech.core
 						cache.removeEventListener(CommandEvent.COMMAND_END, handler);
 							
 						delete cach[cache.saveURL];
-						if (ready) dispatchEvent(new ControlEvent(ControlEvent.READY));
+						
+						dispatchReady();
 					};
 					cache.addEventListener(CommandEvent.COMMAND_END, handler);
 					cach[cache.saveURL] = cache;
 				}
 			}
 			
-//			if (cach.length) dispatchEvent(new ControlEvent(ControlEvent.DOWNLOAD));  //当有需要下载的文件时，发送下载命令。
+			if (cach.length) dispatchEvent(new ControlEvent(ControlEvent.DOWNLOAD));  //当有需要下载的文件时，发送下载命令。
 		}
 		
 		
@@ -412,8 +454,8 @@ package com.winonetech.core
 					}
 				}
 			}
-			return true;
-//			return result && (!cach.length);
+			//return true;
+			return result && (!cach.length);
 		}
 		
 		
@@ -428,7 +470,25 @@ package com.winonetech.core
 		
 		/**
 		 * 
-		 * 存储原始数据。
+		 * 是否使用等待队列。
+		 * 
+		 */
+		
+		public var useWait:Boolean;
+		
+		
+		/**
+		 * 
+		 * 解析文件时存储的组。
+		 * 
+		 */
+		
+		public var cacheGroup:String;
+		
+		
+		/**
+		 * 
+		 * 存储转换前的数据。
 		 * 
 		 */
 		
@@ -454,7 +514,6 @@ package com.winonetech.core
 		
 		protected var cach:Map;
 		
-		protected var cach_sp:Map;
 		
 		/**
 		 * 
@@ -476,6 +535,11 @@ package com.winonetech.core
 		 */
 		private var stor:Store;
 		
+		/**
+		 * @private
+		 */
+		private var inited:Boolean;
+		
 		
 		/**
 		 * @private
@@ -491,8 +555,6 @@ package com.winonetech.core
 		 * @private
 		 */
 		wt var raw:*;
-		
-		
 		
 	}
 }

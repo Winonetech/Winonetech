@@ -84,6 +84,18 @@ package com.winonetech.events
 		
 		/**
 		 * 
+		 * 初始化完毕时触发。<br>
+		 * READY常量定义INIT事件的<code>type</code>属性值。
+		 * 
+		 * @default init
+		 * 
+		 */
+		
+		public static const INIT:String = "init";
+		
+		
+		/**
+		 * 
 		 * 出错时触发。<br>
 		 * ERROR常量定义ERROR事件的<code>type</code>属性值。
 		 * 

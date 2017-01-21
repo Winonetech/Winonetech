@@ -32,7 +32,6 @@ package com.winonetech.tools
 	import flash.events.ProgressEvent;
 	import flash.events.SecurityErrorEvent;
 	import flash.events.TimerEvent;
-	import flash.filesystem.File;
 	import flash.filesystem.FileMode;
 	import flash.filesystem.FileStream;
 	import flash.utils.ByteArray;
@@ -57,87 +56,76 @@ package com.winonetech.tools
 		 * 
 		 * @param $url:String 加载地址。
 		 * @param $useSP:Boolean 是否加入到特殊队列。
+		 * @param $group:String (default = null)一个标记，用于标记在一个组中，从队列中清空Cache时，可以按组清除。
 		 * 
 		 * @return Cache Cache实例。
 		 * 
 		 */
 		
-		public static function cache($url:String, $useSP:Boolean = false):Cache
+		public static function cache($url:String, $useSP:Boolean = false, $group:String = null, $start:Boolean = false):Cache
 		{
 			if(!StringUtil.isEmpty($url))
 			{
 				var loadURL:String = $url;
 				var saveURL:String = CacheUtil.extractURI($url, PathConsts.PATH_FILE);
 				
-				var cache:Cache = (CACH[saveURL] = CACH[saveURL] || new Cache(loadURL, saveURL));
+				var cache:Cache = retrieveCache(loadURL, saveURL, $group);
 				//cahe文件不存在，cache没有执行，cache不在队列中
-				if((!cache.exist) && (!cache.executing) &&
-					(queue.indexOf(cache) == -1 || queue_sp.indexOf(cache) == -1))
+				
+				if(!cache.exist) //cahe文件不存在才加入下载队列。
 				{
-					switch(FileUtil.getFileTypeByURL(saveURL).toLowerCase())
+					if (!$useSP && !checkFileUnloadable(loadURL)) //如果使用等待队列。
 					{
-						case "jpg":
-						case "jpeg":
-						case "png":
-						case "zip":
-							cache.priority = CommandPriorityConsts.HIGH;
-							break;
-						default:
-							cache.priority = CommandPriorityConsts.NORMAL;
-							break;
-					}
-					
-					if ($useSP || checkFileUnloadable(loadURL))
-					{
-						queue_sp.execute(cache) 
+						//如果在非等待队列中，要把它从非等待队列中移除。
+						queue_sp.remove(cache);
+						
+						//如果不在等待队列中，加入等待队列。
+						if(!queue.exist(cache))
+						{
+							queue[$start ? "execute" : "push"](cache);
+							queueTotal ++;
+						}
 					}
 					else
 					{
-						queue.execute(cache);
-						total ++;
+						queue_sp[$start ? "execute" : "push"](cache);
 					}
 				}
 			}
-			return CACH[saveURL];
+			return cache;
 		}
 		
 		
 		/**
 		 * 
-		 * 执行下载队列。
+		 * 清空所有当前正在下载的文件。
+		 * 
+		 * @group:String (default = null) 参数$group代表清除某个组的cache。
 		 * 
 		 */
 		
-		public static function start():void
+		public static function clear($group:String = null):void
 		{
-			if (!allowed) return;
-			
-			if (!queue.executing)
+			if ($group)
 			{
-				if (queue.lave + queue.num > 0) queue.execute();
-			}
-			else
-			{
-				LogUtil.log("正在下载的文件个数：", queue.executingCommands.length);
-				for each (var item:Cache in queue.executingCommands)
+				var group:Object = GROUPS[$group];
+				for each (var item:Cache in group)
 				{
-					LogUtil.log("文件：" + item.saveURL + "，" + item.speed + "，" + item.percent);
+					var flag:int = GROUPS["COUNT"][item.saveURL];
+					flag --;
+					if (flag <= 0)
+					{
+						GROUPS["COUNT"][item.saveURL] = 0;
+						remove(item);
+					}
 				}
-			}
-			
-			if (!queue_sp.executing)
-			{
-				if (queue_sp.lave + queue_sp.num > 0) 
-					queue_sp.execute();
-				else
-					LogUtil.log("暂无特殊队列下载。");
+				delete GROUPS[$group];
 			}
 			else
 			{
-				LogUtil.log("特殊文件正在下载...");
+				queue.clear();
+				queue_sp.clear();
 			}
-			
-			allowed = false;
 		}
 		
 		
@@ -158,21 +146,6 @@ package com.winonetech.tools
 			return file ? file.exists : true;
 		}
 		
-		/**
-		 * 
-		 * 删除zip格式的文件。
-		 * @param $url:String 文件相对路径。
-		 * 
-		 */
-		
-		public static function removeZip($url:String):void
-		{
-			if (FileUtil.getFileTypeByURL($url) == "zip")
-			{
-				var file:File = new File(FileUtil.resolvePathApplication($url));
-				if (file.exists) file.deleteFile();
-			}
-		}
 		
 		/**
 		 * 
@@ -187,21 +160,6 @@ package com.winonetech.tools
 		public static function gain($url:String):Cache
 		{
 			return CACH[$url];
-		}
-		
-		
-		/**
-		 * 
-		 * 将Cache顺序提升至队列前下载。
-		 * 
-		 * @param $cache:Cache 需要提前的Cache实例。
-		 * 
-		 */
-		
-		public static function shift($cache:Cache):void
-		{
-			if ($cache && CACH[$cache.saveURL] == $cache)
-				if(!$cache.executing) queue.shift($cache);
 		}
 		
 		
@@ -244,6 +202,56 @@ package com.winonetech.tools
 				saver.save(request);
 			}
 			return saver;
+		}
+		
+		
+		/**
+		 * 
+		 * 将Cache顺序提升至队列前下载。
+		 * 
+		 * @param $cache:Cache 需要提前的Cache实例。
+		 * 
+		 */
+		
+		public static function shift($cache:Cache):void
+		{
+			if ($cache && CACH[$cache.saveURL] == $cache)
+				if(!$cache.executing) queue.shift($cache);
+		}
+		
+		
+		/**
+		 * 
+		 * 执行下载队列。
+		 * 
+		 */
+		
+		public static function start():void
+		{
+			if (!queue.executing)
+			{
+				if (queue.lave > 0) queue.execute();
+			}
+			else
+			{
+				LogUtil.log("等待队列正在下载的文件个数：", queue.executingCommands.length);
+				for each (var item:Cache in queue.executingCommands)
+				{
+					LogUtil.log("文件：" + item.saveURL + "，speed：" + item.speed + "，percent：" + item.percent);
+				}
+			}
+			
+			if (!queue_sp.executing)
+			{
+				if (queue_sp.lave > 0) 
+					queue_sp.execute();
+				else
+					LogUtil.log("暂无特殊队列下载。");
+			}
+			else
+			{
+				LogUtil.log("特殊文件正在下载...");
+			}
 		}
 		
 		
@@ -322,9 +330,12 @@ package com.winonetech.tools
 		
 		override public function execute():void
 		{
-			commandStart();
-			
-			cache();
+			if (!executing)
+			{
+				commandStart();
+				
+				cache();
+			}
 		}
 		
 		
@@ -393,6 +404,50 @@ package com.winonetech.tools
 			saveURL = $saveURL;
 		}
 		
+		
+		/**
+		 * 
+		 * 移除某个Cache。
+		 * 
+		 * @param $cache:Cache 要移除的Cache实例。
+		 * 
+		 * @return Cache 对应的缓存。
+		 * 
+		 */
+		
+		private static function remove($cache:Cache):void
+		{
+			if(!queue.remove($cache)) queue_sp.remove($cache);
+		}
+		
+		/**
+		 * @private
+		 */
+		private static function removeGroupRecords($cache:Cache):void
+		{
+			for each (var group:Object in GROUPS) delete group[$cache.saveURL];
+			delete GROUPS["COUNT"][$cache.saveURL];
+		}
+		
+		/**
+		 * @private
+		 */
+		private static function retrieveCache($loadURL:String, $saveURL:String, $group:String):Cache
+		{
+			var cache:Cache = (CACH[$saveURL] = CACH[$saveURL] || new Cache($loadURL, $saveURL));
+			if ($group)
+			{
+				var group:Object = GROUPS[$group] = GROUPS[$group] || {};
+				if (!group[cache.saveURL])
+				{
+					group[cache.saveURL] = cache;
+					var flag:int = GROUPS["COUNT"][cache.saveURL];
+					flag++;
+					GROUPS["COUNT"][cache.saveURL] = flag;
+				}
+			}
+			return cache;
+		}
 		
 		/**
 		 * @private
@@ -508,6 +563,7 @@ package com.winonetech.tools
 					{
 						LogUtil.log("下载失败：" + cache.code + "，" + cache.saveURL + "，" + cache.message);
 						cache.reloadCount = 0;
+						unexist++;
 						//标记该文件下载失败，原因是服务端没有这个文件。
 						flagFileUnloadable(cache.loadURL);
 						
@@ -533,12 +589,11 @@ package com.winonetech.tools
 				if (cache.succeed)
 				{
 					success++;
-					LogUtil.log("下载成功" + cache.saveURL + "总数：" + total + "剩余：" + (queue.lave + queue.num));
-					Cache.removeZip(cache.saveURL);    //删除资源zip。
+					removeGroupRecords(cache);
+					LogUtil.log("下载成功" + cache.saveURL + "总数：" + queueTotal + "剩余：" + (queue.lave + queue.num));
 				}
 			}
 		}
-		
 		
 		
 		/**
@@ -575,8 +630,8 @@ package com.winonetech.tools
 				if (cache.succeed)
 				{
 					result = true;
+					removeGroupRecords(cache);
 					LogUtil.log("特殊文件下载成功");
-					Cache.removeZip(cache.saveURL);    //删除资源zip。
 				}
 			}
 		}
@@ -619,10 +674,15 @@ package com.winonetech.tools
 		 */
 		private static function parallelQueueEnd($e:QueueEvent):void
 		{
-			LogUtil.log("文件队列下载结束");
-			LogUtil.log("文件总数：" + total);
+			LogUtil.log("等待队列下载结束");
+			LogUtil.log("文件总数：" + queueTotal);
 			LogUtil.log("成功：" + success);
 			LogUtil.log("失败：" + failure);
+			LogUtil.log("不存在：" + unexist);
+			
+			success = 0;
+			failure = 0;
+			unexist = 0;
 			
 			reloadLater();
 		}
@@ -763,7 +823,7 @@ package com.winonetech.tools
 		
 		/**
 		 * 
-		 * 是否有文件在加载。
+		 * 是否等待队列中有文件在加载。
 		 * 
 		 */
 		
@@ -788,7 +848,7 @@ package com.winonetech.tools
 				parallel.addEventListener(QueueEvent.STEP_END, parallelStepEnd, false, uint.MAX_VALUE);
 				parallel.addEventListener(QueueEvent.QUEUE_START, parallelQueueStart);
 				parallel.addEventListener(QueueEvent.QUEUE_END, parallelQueueEnd);
-				parallel.immediateExecute = false;
+				parallel.limit = 2;
 			}
 			return parallel;
 		}
@@ -803,8 +863,7 @@ package com.winonetech.tools
 				parallel_sp.addEventListener(QueueEvent.STEP_END, parallel_spStepEnd, false, uint.MAX_VALUE);
 				parallel_sp.addEventListener(QueueEvent.QUEUE_START, parallel_spQueueStart);
 				parallel_sp.addEventListener(QueueEvent.QUEUE_END, parallel_spQueueEnd);
-				parallel_sp.immediateExecute = false;
-				parallel_sp.limit = 1;
+				parallel_sp.limit = 2;
 			}
 			return parallel_sp;
 		}
@@ -837,19 +896,37 @@ package com.winonetech.tools
 		
 		/**
 		 * 
-		 * 获取队列闲置命令的长度。
+		 * 获取队列剩余下载的个数。
 		 * 
 		 */
 		
-		public static function get cachesLave():uint
+		public static function get waitLave():uint
 		{
-			return parallel.lave;
+			return queue.lave;
 		}
 		
 		
-		public static function get hasSP():Boolean
+		/**
+		 * 
+		 * 是否有文件需要下载。
+		 * 
+		 */
+		
+		public static function get unwaitLave():uint
 		{
-			return queue_sp.lave > 0;
+			return queue_sp.lave;
+		}
+		
+		
+		/**
+		 * 
+		 * 是否有文件需要下载。
+		 * 
+		 */
+		
+		public static function get hasDownload():Boolean
+		{
+			return unwaitLave > 0 || waitLave > 0;
 		}
 		
 		
@@ -923,7 +1000,7 @@ package com.winonetech.tools
 		 * 
 		 */
 		
-		public static var allowed:Boolean;
+		//public static var allowed:Boolean;
 		
 		
 		/**
@@ -941,7 +1018,7 @@ package com.winonetech.tools
 		/**
 		 * @private
 		 */
-		private static var total:uint = 0;
+		private static var queueTotal:uint = 0;
 		
 		/**
 		 * @private
@@ -949,11 +1026,15 @@ package com.winonetech.tools
 		private static var success:uint = 0;
 		
 		
-		
 		/**
 		 * @private
 		 */
 		private static var failure:uint = 0;
+		
+		/**
+		 * @private
+		 */
+		private static var unexist:uint = 0;
 		
 		/**
 		 * @private
@@ -974,6 +1055,11 @@ package com.winonetech.tools
 		 * @private
 		 */
 		private static const CACH:Map = new Map;
+		
+		/**
+		 * @private
+		 */
+		private static const GROUPS:Object = {COUNT:{}};
 		
 		/**
 		 * @private

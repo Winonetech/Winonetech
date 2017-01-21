@@ -145,7 +145,6 @@
 									if (list.getItemIndex(cache) == -1) list.addItem(cache);
 								} else break;
 							}
-							Cache.start();
 						}
 					}
 					else
