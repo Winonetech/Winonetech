@@ -86,6 +86,18 @@ package com.winonetech.core
 		public function parse($data:Object):void
 		{
 			//将数据保存至data和 raw
+			wt::internalParse($data);
+			
+			TimerUtil.callLater(1, dispatchInit);
+			TimerUtil.callLater(2, dispatchReady);
+		}
+		
+		
+		/**
+		 * @private
+		 */
+		wt function internalParse($data:Object):void
+		{
 			if ($data)
 			{
 				wt::raw = $data;
@@ -106,9 +118,6 @@ package com.winonetech.core
 				}
 			}
 			else data = {};
-			
-			TimerUtil.callLater(1, dispatchInit);
-			TimerUtil.callLater(2, dispatchReady);
 		}
 		
 		
