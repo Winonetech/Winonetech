@@ -157,7 +157,7 @@ package com.winonetech.core
 			cacheGroup = $cacheGroup;
 			disc = {}, rela = {};
 			cach = new Map;
-			
+			cach_sp = new Map;
 			parse($data);
 		}
 		
@@ -457,6 +457,9 @@ package com.winonetech.core
 			//return true;
 			return result && (!cach.length);
 		}
+		
+		
+		protected var cach_sp:Map;
 		
 		
 		/**

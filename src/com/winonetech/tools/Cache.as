@@ -228,6 +228,8 @@ package com.winonetech.tools
 		
 		public static function start():void
 		{
+			if (!allowed) return;
+			
 			if (!queue.executing)
 			{
 				if (queue.lave > 0) queue.execute();
@@ -833,6 +835,17 @@ package com.winonetech.tools
 		}
 		
 		
+		public static function get cachesLave():uint
+		{
+			return parallel.lave;
+		}
+		
+		
+		public static function get hasSP():Boolean
+		{
+			return queue_sp.lave > 0;
+		}
+		
 		/**
 		 * 
 		 * 加载队列的引用。
@@ -929,6 +942,9 @@ package com.winonetech.tools
 			return unwaitLave > 0 || waitLave > 0;
 		}
 		
+		
+		
+		public static var allowed:Boolean;
 		
 		
 		/**
