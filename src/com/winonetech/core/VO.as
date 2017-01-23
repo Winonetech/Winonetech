@@ -67,6 +67,7 @@ package com.winonetech.core
 		 * 
 		 * @param $data:Object (default = null) 初始化的数据，可以是XML，JSON格式的数据，或Object。
 		 * 
+		 * 
 		 */
 		
 		public function VO($data:Object = null, $name:String = "vo", $useWait:Boolean = true, $cacheGroup:String = null)
