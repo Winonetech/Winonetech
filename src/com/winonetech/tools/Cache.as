@@ -115,8 +115,12 @@ package com.winonetech.tools
 					flag --;
 					if (flag <= 0)
 					{
-						GROUPS["COUNT"][item.saveURL] = 0;
+						delete GROUPS["COUNT"][item.saveURL];
 						remove(item);
+					}
+					else
+					{
+						trace("文件不止在一个地方使用。");
 					}
 				}
 				delete GROUPS[$group];
@@ -228,11 +232,7 @@ package com.winonetech.tools
 		
 		public static function start():void
 		{
-			if (!queue.executing)
-			{
-				if (queue.lave > 0) queue.execute();
-			}
-			else
+			if (queue.executing)
 			{
 				LogUtil.log("等待队列正在下载的文件个数：", queue.executingCommands.length);
 				for each (var item:Cache in queue.executingCommands)
@@ -241,17 +241,18 @@ package com.winonetech.tools
 				}
 			}
 			
-			if (!queue_sp.executing)
+			if (queue.lave > 0) queue.execute();
+			
+			if (queue_sp.executing)
 			{
-				if (queue_sp.lave > 0) 
-					queue_sp.execute();
-				else
-					LogUtil.log("暂无特殊队列下载。");
+				LogUtil.log("特殊队列正在下载的文件个数：", queue.executingCommands.length);
+				for each (item in queue.executingCommands)
+				{
+					LogUtil.log("文件：" + item.saveURL + "，speed：" + item.speed + "，percent：" + item.percent);
+				}
 			}
-			else
-			{
-				LogUtil.log("特殊文件正在下载...");
-			}
+			
+			if (queue_sp.lave > 0) queue_sp.execute();
 		}
 		
 		
@@ -833,6 +834,17 @@ package com.winonetech.tools
 		}
 		
 		
+		public static function get cachesLave():uint
+		{
+			return parallel.lave;
+		}
+		
+		
+		public static function get hasSP():Boolean
+		{
+			return queue_sp.lave > 0;
+		}
+		
 		/**
 		 * 
 		 * 加载队列的引用。
@@ -929,6 +941,9 @@ package com.winonetech.tools
 			return unwaitLave > 0 || waitLave > 0;
 		}
 		
+		
+		
+		public static var allowed:Boolean;
 		
 		
 		/**
