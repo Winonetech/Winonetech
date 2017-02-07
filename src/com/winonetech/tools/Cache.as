@@ -74,7 +74,7 @@ package com.winonetech.tools
 				
 				if(!cache.exist) //cahe文件不存在才加入下载队列。
 				{
-					if (!$useSP && !checkFileUnloadable(loadURL)) //如果使用等待队列。
+					if (!$useSP) //如果使用等待队列。
 					{
 						//如果在非等待队列中，要把它从非等待队列中移除。
 						queue_sp.remove(cache);
@@ -495,7 +495,7 @@ package com.winonetech.tools
 		{
 			try
 			{
-				var temp:String = JSON.stringify($value);
+				var temp:String = JSON.stringify($value, null, '\t');
 			} catch(e:Error) {}
 			if (temp)
 			{
@@ -566,7 +566,7 @@ package com.winonetech.tools
 						cache.reloadCount = 0;
 						unexist++;
 						//标记该文件下载失败，原因是服务端没有这个文件。
-						flagFileUnloadable(cache.loadURL);
+//						flagFileUnloadable(cache.loadURL);
 						
 					}
 					else
@@ -582,7 +582,7 @@ package com.winonetech.tools
 					failure++;
 					FAIL[cache.saveURL] = cache;
 					//标记下载失败，可能原因是服务端阻塞。
-					flagFileUnloadable(cache.loadURL);
+//					flagFileUnloadable(cache.loadURL);
 				}
 			}
 			else
