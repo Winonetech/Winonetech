@@ -11,6 +11,7 @@ package com.winonetech.controls
 	import cn.vision.utils.ArrayUtil;
 	import cn.vision.utils.DebugUtil;
 	import cn.vision.utils.HTTPUtil;
+	import cn.vision.utils.MathUtil;
 	
 	import com.winonetech.core.wt;
 	
@@ -386,6 +387,24 @@ package com.winonetech.controls
 				}
 				super.location = $value;
 			}
+		}
+		
+		
+		/**
+		 * @inheritDoc
+		 */
+		
+		override public function set horizontalScrollPosition(value:Number):void
+		{
+			// Clip the vertical scroll position to appropriate min/max bounds.
+			value = MathUtil.clamp(value, 0, maxHorizontalScrollPosition);
+			
+			super.horizontalScrollPosition = value;
+			
+			if (htmlLoader)
+				htmlLoader.scrollH = value;
+			else
+				invalidateProperties();
 		}
 		
 		

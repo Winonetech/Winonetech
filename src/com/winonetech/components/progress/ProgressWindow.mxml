@@ -82,8 +82,10 @@
 			 */
 			protected function processPlay():void
 			{
-				message = "有新的排期，正在下载素材...";
-				if (list) list.removeAll();
+//				message = "有新的排期，正在下载素材...";
+				Cache.allowed = true;
+				Cache.start();
+				list.removeAll();
 				pushCaches();
 			}
 			
@@ -201,6 +203,8 @@
 			 */
 			private var playing:Boolean;
 			
+			
+			public var isDownloading:Boolean;
 			
 			/**
 			 * @private
