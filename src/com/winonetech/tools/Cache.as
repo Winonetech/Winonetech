@@ -62,14 +62,14 @@ package com.winonetech.tools
 		 * 
 		 */
 		
-		public static function cache($url:String, $useSP:Boolean = false, $group:String = null, $start:Boolean = false):Cache
+		public static function cache($url:String, $useSP:Boolean = false, $group:String = null, $start:Boolean = false, $isEpaper:Boolean = false):Cache
 		{
 			if(!StringUtil.isEmpty($url))
 			{
 				var loadURL:String = $url;
 				var saveURL:String = CacheUtil.extractURI($url, PathConsts.PATH_FILE);
 				
-				var cache:Cache = retrieveCache(loadURL, saveURL, $group);
+				var cache:Cache = retrieveCache(loadURL, saveURL, $group, $isEpaper);
 				//cahe文件不存在，cache没有执行，cache不在队列中
 				
 				if(!cache.exist) //cahe文件不存在才加入下载队列。
@@ -303,11 +303,11 @@ package com.winonetech.tools
 		 * 
 		 */
 		
-		public function Cache($loadURL:String = null, $saveURL:String = null)
+		public function Cache($loadURL:String = null, $saveURL:String = null, $isEpaper:Boolean = false)
 		{
 			super();
 			
-			initialize($loadURL, $saveURL);
+			initialize($loadURL, $saveURL, $isEpaper);
 		}
 		
 		
@@ -399,10 +399,11 @@ package com.winonetech.tools
 		/**
 		 * @private
 		 */
-		private function initialize($loadURL:String, $saveURL:String):void
+		private function initialize($loadURL:String, $saveURL:String, $isEpaper:Boolean = false):void
 		{
-			loadURL = $loadURL;
-			saveURL = $saveURL;
+			loadURL  = $loadURL;
+			saveURL  = $saveURL;
+			isEpaper = $isEpaper;
 		}
 		
 		
@@ -433,9 +434,9 @@ package com.winonetech.tools
 		/**
 		 * @private
 		 */
-		private static function retrieveCache($loadURL:String, $saveURL:String, $group:String):Cache
+		private static function retrieveCache($loadURL:String, $saveURL:String, $group:String, $isEpaper:Boolean = false):Cache
 		{
-			var cache:Cache = (CACH[$saveURL] = CACH[$saveURL] || new Cache($loadURL, $saveURL));
+			var cache:Cache = (CACH[$saveURL] = CACH[$saveURL] || new Cache($loadURL, $saveURL, $isEpaper));
 			if ($group)
 			{
 				var group:Object = GROUPS[$group] = GROUPS[$group] || {};
@@ -622,7 +623,7 @@ package com.winonetech.tools
 				else
 				{
 					result = false;
-					FAIL_SP[cache.saveURL] = cache;
+					FAIL[cache.saveURL] = cache;
 					LogUtil.log("特殊文件下载失败：" + cache.code + "，" + cache.saveURL + "，网络较慢，FTP服务器无响应。");
 				}
 			}
@@ -666,7 +667,9 @@ package com.winonetech.tools
 			LogUtil.log("特殊队列下载结束");
 			LogUtil.log(result ? "特殊队列下载成功" : "特殊队列下载失败");
 			
-			reloadLater(true);
+			queueUseCount--;
+			
+			reloadLater();
 		}
 		
 		
@@ -684,6 +687,7 @@ package com.winonetech.tools
 			success = 0;
 			failure = 0;
 			unexist = 0;
+			queueUseCount--;
 			
 			reloadLater();
 		}
@@ -694,6 +698,7 @@ package com.winonetech.tools
 		private static function parallelQueueStart($e:QueueEvent):void
 		{
 			LogUtil.log("文件队列下载开始");
+			queueUseCount++;
 		}
 		
 		
@@ -703,23 +708,24 @@ package com.winonetech.tools
 		private static function parallel_spQueueStart($e:QueueEvent):void
 		{
 			LogUtil.log("特殊队列下载开始");
+			queueUseCount++;
 		}
 		
 		/**
 		 * @private
 		 */
-		private static function reloadLater($sp:Boolean = false):void
+		private static function reloadLater():void
 		{
-			if (FAIL.length) 
+			if (queueUseCount == 0 && FAIL.length) 
 			{
-				var timer:Timer = new Timer(60000, 60);
+				var timer:Timer = new Timer(60000, RELOADTIME);
 				var handler:Function = function(e:TimerEvent):void
 				{
 					timer.removeEventListener(TimerEvent.TIMER_COMPLETE, handler);
 					timer.stop();
 					timer = null;
 					
-					$sp ? reloadSP() : reloadFailures();
+					reloadFailures();
 				};
 				timer.addEventListener(TimerEvent.TIMER_COMPLETE, handler);
 				timer.start();
@@ -731,21 +737,22 @@ package com.winonetech.tools
 		 */
 		private static function reloadFailures():void
 		{
-			for each (var item:Cache in FAIL) queue.execute(item);
+			for each (var item:Cache in FAIL) queue_sp.execute(item);
 			
-			queue.execute();
+			queue_sp.execute();
 		}
+
 		
 		
 		/**
 		 * @private
 		 */
-		private static function reloadSP():void
-		{
-			for each (var item:Cache in FAIL_SP) queue_sp.execute(item);
-			
-			queue_sp.execute();
-		}
+//		private static function reloadSP():void
+//		{
+//			for each (var item:Cache in FAIL_SP) queue_sp.execute(item);
+//			
+//			queue_sp.execute();
+//		}
 		
 		/**
 		 * 
@@ -982,6 +989,8 @@ package com.winonetech.tools
 		public var saveURL:String;
 		
 		
+		public var isEpaper:Boolean;
+		
 		/**
 		 * @private
 		 */
@@ -1084,7 +1093,8 @@ package com.winonetech.tools
 		/**
 		 * @private
 		 */
-		private static const FAIL_SP:Map = new Map;
+		private static var queueUseCount:uint;
+//		private static const FAIL_SP:Map = new Map;
 		
 		/**
 		 * @private
@@ -1095,6 +1105,12 @@ package com.winonetech.tools
 		 * @private
 		 */
 		private static var cacheListStream:FileStream = new FileStream;
+		
+		/**
+		 * 重新下载等待时间。(分钟)
+		 * @private
+		 */
+		private static const RELOADTIME:uint = 60; 
 		
 	}
 }

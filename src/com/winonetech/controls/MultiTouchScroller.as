@@ -43,10 +43,6 @@ package com.winonetech.controls
 			addEventListener(MouseEvent.MOUSE_DOWN, scroller_mouseDownHandler);
 		}
 		
-		private function ass(e:MouseEvent):void
-		{
-			trace(getQualifiedClassName(e.target));		
-		}
 		/**
 		 * 
 		 * 停止滚动的缓动操作。
