@@ -192,15 +192,15 @@
 				return Cache.executingCaches;
 			}
 			
-//			/**
-//			 * @private
-//			 */
-//			public function set data($value:Map):void
-//			{
-//				wt::data = $value;
-//				
-//				playing && processPlay();
-//			}
+			/**
+			 * @private
+			 */
+			public function set data($value:Map):void
+			{
+				wt::data = $value;
+				
+				playing && processPlay();
+			}
 			
 			
 			/**
@@ -241,9 +241,6 @@
 			private var length:uint;
 			
 			
-			/**
-			 * @private
-			 */
 			wt var data:Map;
 			
 			public var isDownloading:Boolean;
