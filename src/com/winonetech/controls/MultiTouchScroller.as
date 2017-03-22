@@ -82,7 +82,7 @@ package com.winonetech.controls
 		 */
 		private function scroller_mouseDownHandler(e:MouseEvent):void
 		{
-			if (viewport && e.target is Group)
+			if (viewport)
 			{
 				if (maxHorizontalScrollPosition || 
 					maxVerticalScrollPosition)

@@ -63,5 +63,7 @@ package com.winonetech.controls
 			stage.removeEventListener(MouseEvent.MOUSE_UP, handlerMouseUp);
 		}
 		
+		public var extra:Object;
+		
 	}
 }
