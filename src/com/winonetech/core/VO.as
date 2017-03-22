@@ -299,7 +299,7 @@ package com.winonetech.core
 			for each (var item:* in $args)
 			{
 				var cache:Cache = (item is String) ? Cache.cache(item, !useWait, cacheGroup) : item;
-				if (!useWait && cache && ! cach[cache.saveURL] && !cache.exist)
+				if (useWait && cache && ! cach[cache.saveURL] && !cache.exist)
 				{
 					var handler:Function = function($e:CommandEvent):void
 					{
