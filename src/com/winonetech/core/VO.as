@@ -282,10 +282,6 @@ package com.winonetech.core
 		}
 		
 		
-		
-//		protected function destroy():void {}
-		
-		
 		/**
 		 * 
 		 * 注册需要缓存的文件地址。
@@ -298,7 +294,7 @@ package com.winonetech.core
 		{
 			for each (var item:* in $args)
 			{
-				var cache:Cache = (item is String) ? Cache.cache(item, !useWait, cacheGroup) : item;
+				var cache:Cache = (item is String) ? Cache.cache(item, !useWait, cacheGroup, true) : item;
 				if (useWait && cache && ! cach[cache.saveURL] && !cache.exist)
 				{
 					var handler:Function = function($e:CommandEvent):void
